@@ -1,13 +1,25 @@
 from rest_framework import serializers
-from .models import Ingredient, IngredientRecette
+from .models import (Recette, Ingredient, IngredientRecette, Etape)
 
-class IngredientRecetteSerializer(serializers.ModelSerializer):
-    ingredient_nom = serializers.CharField(source='ingredient.nom', read_only=True) 
+class RecetteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = IngredientRecette
-        fields = ['id', 'recette', 'ingredient', 'quantite', 'unite', 'status', 'ingredient_nom']
+        model = Recette
+        fields = '__all__'
+
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = '__all__'
+        fields = ["id", "nom"]
+
+class EtapeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Etape
+        fields = ["id", "ordre", "description"]
+
+class IngredientRecetteSerializer(serializers.ModelSerializer):
+    ingredient_nom = serializers.ReadOnlyField(source="ingredient.nom")
+
+    class Meta:
+        model = IngredientRecette
+        fields = ["id", "ingredient_nom", "quantite", "unite"]
