@@ -30,3 +30,15 @@ class IngredientRecette(models.Model):
 
     def __str__(self):
         return f"{self.quantite} {self.unite} de {self.ingredient.nom} pour {self.recette.nom}"
+
+class Etape(models.Model):
+    recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="etapes")
+    description = models.TextField()
+    ordre = models.PositiveIntegerField()
+    statut = models.CharField(max_length=50, default="actif")
+
+    class Meta:
+        ordering = ["ordre"]
+
+    def __str__(self):
+        return f"Étape {self.ordre} - {self.recette.nom}"
