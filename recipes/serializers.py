@@ -27,7 +27,7 @@ class UstensileSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UstensileRecetteDetailSerializer(serializers.ModelSerializer):
-    ingredient = IngredientSerializer(read_only=True)
+    ustensile = UstensileSerializer(read_only=True)
     
     class Meta:
         model = UstensileRecette
@@ -36,6 +36,7 @@ class UstensileRecetteDetailSerializer(serializers.ModelSerializer):
 class RecetteSerializer(serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
     etapes = EtapeSerializer(many=True, read_only=True)
+    ustensiles = serializers.SerializerMethodField()
     
     class Meta:
         model = Recette
@@ -44,6 +45,10 @@ class RecetteSerializer(serializers.ModelSerializer):
     def get_ingredients(self, obj):
         ingredients_recette = IngredientRecette.objects.filter(recette=obj, status='Actif')
         return IngredientRecetteDetailSerializer(ingredients_recette, many=True).data
+    
+    def get_ustensiles(self, obj):
+        ustensiles_recette = UstensileRecette.objects.filter(recette=obj, status='Actif')
+        return UstensileRecetteDetailSerializer(ustensiles_recette, many=True).data
 
 
 class IngredientRecetteSerializer(serializers.ModelSerializer):
