@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import (Recette, Ingredient, IngredientRecette, Etape)
+from .models import (Recette, Ingredient, IngredientRecette, Etape, Ustensile, UstensileRecette)
 
 class EtapeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,6 +21,18 @@ class IngredientRecetteDetailSerializer(serializers.ModelSerializer):
         model = IngredientRecette
         fields = ["id", "ingredient", "quantite", "unite"]
 
+class UstensileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ustensile
+        fields = '__all__'
+
+class UstensileRecetteDetailSerializer(serializers.ModelSerializer):
+    ingredient = IngredientSerializer(read_only=True)
+    
+    class Meta:
+        model = UstensileRecette
+        fields = '__all__'
+
 class RecetteSerializer(serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
     etapes = EtapeSerializer(many=True, read_only=True)
@@ -41,3 +53,11 @@ class IngredientRecetteSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientRecette
         fields = ["id", "recette", "recette_nom", "ingredient", "ingredient_nom", "quantite", "unite"]
+
+class UstensileRecetteSerializer(serializers.ModelSerializer):
+    ustensile_nom = serializers.ReadOnlyField(source="ustensile.nom")
+    recette_nom = serializers.ReadOnlyField(source="recette.nom")
+
+    class Meta:
+        model = UstensileRecette
+        fields = ["id", "recette", "recette_nom", "ustensile", "ustensile_nom"]

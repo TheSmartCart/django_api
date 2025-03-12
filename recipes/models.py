@@ -31,6 +31,21 @@ class IngredientRecette(models.Model):
     def __str__(self):
         return f"{self.quantite} {self.unite} de {self.ingredient.nom} pour {self.recette.nom}"
 
+class Ustensile(models.Model):
+    nom = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
+
+    def __str__(self):
+        return self.nom
+
+class UstensileRecette(models.Model):
+    recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="ustensile_recette")
+    ustensile = models.ForeignKey(Ustensile, on_delete=models.CASCADE, related_name="recettes_utilisant")
+    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
+
+    def __str__(self):
+        return f"Vous aurez besoin de {self.ustensile.nom} pour {self.recette.nom}"
+
 class Etape(models.Model):
     recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="etapes")
     description = models.TextField()

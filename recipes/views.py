@@ -1,7 +1,7 @@
 from rest_framework import viewsets
-from .models import (Recette, Ingredient, IngredientRecette, Etape)
+from .models import (Recette, Ingredient, IngredientRecette, Etape, Ustensile, UstensileRecette)
 from .serializers import (RecetteSerializer, IngredientSerializer, 
-                         IngredientRecetteSerializer, EtapeSerializer)
+                         IngredientRecetteSerializer, EtapeSerializer, UstensileSerializer, UstensileRecetteSerializer)
 
 class RecetteViewSet(viewsets.ModelViewSet):
     queryset = Recette.objects.all()
@@ -18,3 +18,11 @@ class IngredientViewSet(viewsets.ModelViewSet):
 class IngredientRecetteViewSet(viewsets.ModelViewSet):
     queryset = IngredientRecette.objects.all()
     serializer_class = IngredientRecetteSerializer
+
+class UstensileViewSet(viewsets.ModelViewSet):
+    queryset = Ustensile.objects.all()
+    serializer_class = UstensileSerializer
+
+class UstensileRecetteViewSet(viewsets.ModelViewSet):
+    queryset = UstensileRecette.objects.all()
+    serializer_class = UstensileRecetteSerializer
