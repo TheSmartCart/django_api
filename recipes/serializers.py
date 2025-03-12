@@ -4,7 +4,10 @@ from .models import (Recette, Ingredient, IngredientRecette, Etape)
 class EtapeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Etape
-        fields = ["id", "ordre", "description"]
+        fields = ["id", "ordre", "description", "recette"]
+        extra_kwargs = {
+            'recette': {'required': True}
+        }
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
