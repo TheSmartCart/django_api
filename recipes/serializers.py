@@ -19,7 +19,8 @@ class EtapeSerializer(serializers.ModelSerializer):
 
 class IngredientRecetteSerializer(serializers.ModelSerializer):
     ingredient_nom = serializers.ReadOnlyField(source="ingredient.nom")
+    recette_nom = serializers.ReadOnlyField(source="recette.nom")
 
     class Meta:
         model = IngredientRecette
-        fields = ["id", "ingredient_nom", "quantite", "unite"]
+        fields = ["id", "recette", "recette_nom", "ingredient", "ingredient_nom", "quantite", "unite"]
