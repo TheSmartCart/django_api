@@ -38,6 +38,12 @@ class ReponseUtilisateur(models.Model):
     
     def clean(self):
         from django.core.exceptions import ValidationError
+        
+        # Si l'objet n'a pas encore été sauvegardé (pas d'ID), on ne peut pas vérifier
+        # les propositions_selectionnees car elles n'existent pas encore
+        if self.pk is None:
+            return
+            
         # Vérifier qu'au moins un des champs valeur_numerique ou propositions_selectionnees existe
         if self.valeur_numerique is None and not self.propositions_selectionnees.exists():
             raise ValidationError("Vous devez fournir soit une valeur numérique, soit au moins une proposition sélectionnée.")

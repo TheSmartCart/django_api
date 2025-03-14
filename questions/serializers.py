@@ -71,11 +71,45 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        # Traitement pour créer la réponse de l'utilisateur
-        propositions_selectionnees = validated_data.pop('propositions_selectionnees')
-        reponse = ReponseUtilisateur.objects.create(**validated_data)
-
-        # Ajouter les propositions sélectionnées à la réponse
-        reponse.propositions_selectionnees.set(propositions_selectionnees)
-        reponse.save()
+        # Extraire les propositions_data avant de créer la réponse
+        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+        
+        # Créer l'objet ReponseUtilisateur
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=validated_data['utilisateur'],
+            question=validated_data['question'],
+            valeur_numerique=validated_data.get('valeur_numerique')
+        )
+        
+        # Maintenant ajouter les propositions
+        for proposition_data in propositions_data:
+            proposition_id = proposition_data.get('proposition')
+            if proposition_id:
+                PropositionSelectionnee.objects.create(
+                    reponse=reponse,
+                    proposition_id=proposition_id
+                )
+        
         return reponse
+        
+    def update(self, instance, validated_data):
+        # Gérer la mise à jour des champs simples
+        instance.valeur_numerique = validated_data.get('valeur_numerique', instance.valeur_numerique)
+        instance.save()
+        
+        # Gérer la mise à jour des propositions sélectionnées
+        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+        if 'propositions_selectionnees' in self.initial_data:
+            # Supprimer les anciennes propositions
+            instance.propositions_selectionnees.all().delete()
+            
+            # Ajouter les nouvelles propositions
+            for proposition_data in propositions_data:
+                proposition_id = proposition_data.get('proposition')
+                if proposition_id:
+                    PropositionSelectionnee.objects.create(
+                        reponse=instance,
+                        proposition_id=proposition_id
+                    )
+        
+        return instance
