@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/', include('recipes.urls')),
     path('api/', include('questions.urls')),
     path('api/', include('enseignes.urls')),
+    path('api/', include('orders.urls')),
     # end include
     
     # Path for the documentation
