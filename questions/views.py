@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee, ReponseUtilisateur
@@ -61,27 +62,17 @@ class TypeQuestionViewSet(viewsets.ModelViewSet):
 class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
     queryset = ReponseUtilisateur.objects.all()
     serializer_class = ReponseUtilisateurSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        queryset = ReponseUtilisateur.objects.all()
-        utilisateur_id = self.request.query_params.get('utilisateur_id', None)
-        question_id = self.request.query_params.get('question_id', None)
+        user = self.request.user
+        return ReponseUtilisateur.objects.filter(utilisateur=user)
         
-        if utilisateur_id is not None:
-            queryset = queryset.filter(utilisateur_id=utilisateur_id)
-        if question_id is not None:
-            queryset = queryset.filter(question_id=question_id)
-        
-        return queryset
-    
-    @action(detail=False, methods=['get'])
-    def mes_reponses(self, request):
-        """Endpoint pour obtenir toutes les réponses de l'utilisateur connecté."""
-        if request.user.is_authenticated:
-            reponses = ReponseUtilisateur.objects.filter(utilisateur=request.user)
-            serializer = self.get_serializer(reponses, many=True)
-            return Response(serializer.data)
-        return Response({"error": "Utilisateur non connecté"}, status=status.HTTP_401_UNAUTHORIZED)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 class PropositionSelectionneeViewSet(viewsets.ModelViewSet):
     queryset = PropositionSelectionnee.objects.all()

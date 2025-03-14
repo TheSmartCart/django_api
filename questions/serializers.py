@@ -57,6 +57,7 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         model = ReponseUtilisateur
         fields = ['id', 'utilisateur', 'nom_utilisateur', 'question', 'titre_question', 
                  'date_creation', 'valeur_numerique', 'propositions_selectionnees']
+        read_only_fields = ['utilisateur']  # Rend le champ utilisateur en lecture seule
     
     def validate(self, data):
         # Vérifier qu'au moins un des champs valeur_numerique ou propositions_selectionnees existe
@@ -71,6 +72,10 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
+        # Récupérer l'utilisateur à partir du contexte (injecté par la vue)
+        utilisateur = self.context['request'].user
+        validated_data['utilisateur'] = utilisateur
+        
         # Extraire les propositions_data avant de créer la réponse
         propositions_data = self.initial_data.get('propositions_selectionnees', [])
         
@@ -93,6 +98,11 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         return reponse
         
     def update(self, instance, validated_data):
+        # Vérifier que l'utilisateur actuel est bien le créateur de la réponse
+        request = self.context.get('request')
+        if request and request.user != instance.utilisateur:
+            raise serializers.ValidationError("Vous ne pouvez pas modifier une réponse qui ne vous appartient pas.")
+            
         # Gérer la mise à jour des champs simples
         instance.valeur_numerique = validated_data.get('valeur_numerique', instance.valeur_numerique)
         instance.save()
