@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Question, Proposition, TypeQuestion
+from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee, ReponseUtilisateur
 
 class PropositionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,3 +40,42 @@ class QuestionSerializer(serializers.ModelSerializer):
             instance.propositions.all().delete()
         
         return instance
+
+class PropositionSelectionneeSerializer(serializers.ModelSerializer):
+    texte_proposition = serializers.ReadOnlyField(source='proposition.texte')
+    
+    class Meta:
+        model = PropositionSelectionnee
+        fields = ['id', 'proposition', 'texte_proposition']
+
+class ReponseUtilisateurSerializer(serializers.ModelSerializer):
+    propositions_selectionnees = PropositionSelectionneeSerializer(many=True, required=False)
+    nom_utilisateur = serializers.ReadOnlyField(source='utilisateur.username')
+    titre_question = serializers.ReadOnlyField(source='question.title')
+    
+    class Meta:
+        model = ReponseUtilisateur
+        fields = ['id', 'utilisateur', 'nom_utilisateur', 'question', 'titre_question', 
+                 'date_creation', 'valeur_numerique', 'propositions_selectionnees']
+    
+    def validate(self, data):
+        # Vérifier qu'au moins un des champs valeur_numerique ou propositions_selectionnees existe
+        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+        if data.get('valeur_numerique') is None and not propositions_data:
+            raise serializers.ValidationError("Vous devez fournir soit une valeur numérique, soit au moins une proposition sélectionnée.")
+        
+        # Vérifier qu'on n'a pas à la fois une valeur numérique et des propositions sélectionnées
+        if data.get('valeur_numerique') is not None and propositions_data:
+            raise serializers.ValidationError("Vous ne pouvez pas fournir à la fois une valeur numérique et des propositions sélectionnées.")
+        
+        return data
+    
+    def create(self, validated_data):
+        # Traitement pour créer la réponse de l'utilisateur
+        propositions_selectionnees = validated_data.pop('propositions_selectionnees')
+        reponse = ReponseUtilisateur.objects.create(**validated_data)
+
+        # Ajouter les propositions sélectionnées à la réponse
+        reponse.propositions_selectionnees.set(propositions_selectionnees)
+        reponse.save()
+        return reponse
