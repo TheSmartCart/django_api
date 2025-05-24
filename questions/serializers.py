@@ -4,7 +4,7 @@ from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee
 class PropositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proposition
-        fields = ['id', 'texte', 'statut']
+        fields = ['id', 'texte', 'statut', 'image']
 
 class TypeQuestionSerializer(serializers.ModelSerializer):
     class Meta:

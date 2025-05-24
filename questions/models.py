@@ -26,6 +26,7 @@ class Proposition(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='propositions')
     texte = models.CharField(max_length=255)
     statut = models.CharField(max_length=20, default='Actif')
+    image = models.ImageField(upload_to='propositions/', blank=True, null=True)
     
     def __str__(self):
         return self.texte
