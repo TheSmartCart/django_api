@@ -11,8 +11,11 @@ class TypeQuestion(models.Model):
 
 class Question(models.Model):
     title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
     type = models.ForeignKey(TypeQuestion, on_delete=models.CASCADE, related_name='questions')
     dateCreation = models.DateTimeField(auto_now_add=True)
+    min_value = models.FloatField(null=True, blank=True, help_text="Valeur minimale pour les questions de type slider")
+    max_value = models.FloatField(null=True, blank=True, help_text="Valeur maximale pour les questions de type slider")
     status = models.CharField(max_length=20, choices=[
         ('Actif', 'Actif'),
         ('Brouillon', 'Brouillon'),

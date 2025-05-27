@@ -17,7 +17,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Question
-        fields = ['id', 'title', 'type', 'type_nom', 'dateCreation', 'status', 'propositions']
+        fields = ['id', 'title', 'description', 'type', 'type_nom', 'dateCreation', 'status', 'min_value', 'max_value', 'propositions']
     
     def create(self, validated_data):
         propositions_data = validated_data.pop('propositions', [])
@@ -32,8 +32,11 @@ class QuestionSerializer(serializers.ModelSerializer):
         propositions_data = validated_data.pop('propositions', [])
         
         instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
         instance.type = validated_data.get('type', instance.type)
         instance.status = validated_data.get('status', instance.status)
+        instance.min_value = validated_data.get('min_value', instance.min_value)
+        instance.max_value = validated_data.get('max_value', instance.max_value)
         instance.save()
         
         if propositions_data:
@@ -68,6 +71,18 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         # Vérifier qu'on n'a pas à la fois une valeur numérique et des propositions sélectionnées
         if data.get('valeur_numerique') is not None and propositions_data:
             raise serializers.ValidationError("Vous ne pouvez pas fournir à la fois une valeur numérique et des propositions sélectionnées.")
+        
+        # Vérification des limites min et max pour les questions de type slider
+        question = data.get('question')
+        valeur_numerique = data.get('valeur_numerique')
+        
+        if question and valeur_numerique is not None:
+            # Vérifier si les limites min et max sont définies pour cette question
+            if question.min_value is not None and valeur_numerique < question.min_value:
+                raise serializers.ValidationError(f"La valeur numérique doit être supérieure ou égale à {question.min_value}.")
+                
+            if question.max_value is not None and valeur_numerique > question.max_value:
+                raise serializers.ValidationError(f"La valeur numérique doit être inférieure ou égale à {question.max_value}.")
         
         return data
     
