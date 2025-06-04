@@ -52,7 +52,7 @@ class PropositionSelectionneeSerializer(serializers.ModelSerializer):
         fields = ['id', 'proposition', 'texte_proposition']
 
 class ReponseUtilisateurSerializer(serializers.ModelSerializer):
-    propositions_selectionnees = PropositionSelectionneeSerializer(many=True, required=False)
+    propositions_selectionnees = PropositionSelectionneeSerializer(many=True, required=False, write_only=True)
     nom_utilisateur = serializers.ReadOnlyField(source='utilisateur.username')
     titre_question = serializers.ReadOnlyField(source='question.title')
     
@@ -60,9 +60,12 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         model = ReponseUtilisateur
         fields = ['id', 'utilisateur', 'nom_utilisateur', 'question', 'titre_question', 
                  'date_creation', 'valeur_numerique', 'propositions_selectionnees']
-        read_only_fields = ['utilisateur']  # Rend le champ utilisateur en lecture seule
+        read_only_fields = ['utilisateur']
     
     def validate(self, data):
+        # Si on est en bulk (many=True), ignorer la validation ici (elle sera faite par le ListSerializer)
+        if isinstance(self.initial_data, list):
+            return data
         # Vérifier qu'au moins un des champs valeur_numerique ou propositions_selectionnees existe
         propositions_data = self.initial_data.get('propositions_selectionnees', [])
         if data.get('valeur_numerique') is None and not propositions_data:
@@ -85,14 +88,14 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"La valeur numérique doit être inférieure ou égale à {question.max_value}.")
         
         return data
-    
+
     def create(self, validated_data):
         # Récupérer l'utilisateur à partir du contexte (injecté par la vue)
         utilisateur = self.context['request'].user
         validated_data['utilisateur'] = utilisateur
         
         # Extraire les propositions_data avant de créer la réponse
-        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+        propositions_data = validated_data.pop('propositions_selectionnees', [])
         
         # Créer l'objet ReponseUtilisateur
         reponse = ReponseUtilisateur.objects.create(
@@ -104,6 +107,8 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         # Maintenant ajouter les propositions
         for proposition_data in propositions_data:
             proposition_id = proposition_data.get('proposition')
+            if isinstance(proposition_id, Proposition):
+                proposition_id = proposition_id.id
             if proposition_id:
                 PropositionSelectionnee.objects.create(
                     reponse=reponse,
