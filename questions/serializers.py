@@ -63,30 +63,44 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         read_only_fields = ['utilisateur']
     
     def validate(self, data):
-        # Si on est en bulk (many=True), ignorer la validation ici (elle sera faite par le ListSerializer)
         if isinstance(self.initial_data, list):
             return data
-        # Vérifier qu'au moins un des champs valeur_numerique ou propositions_selectionnees existe
-        propositions_data = self.initial_data.get('propositions_selectionnees', [])
-        if data.get('valeur_numerique') is None and not propositions_data:
-            raise serializers.ValidationError("Vous devez fournir soit une valeur numérique, soit au moins une proposition sélectionnée.")
-        
-        # Vérifier qu'on n'a pas à la fois une valeur numérique et des propositions sélectionnées
-        if data.get('valeur_numerique') is not None and propositions_data:
-            raise serializers.ValidationError("Vous ne pouvez pas fournir à la fois une valeur numérique et des propositions sélectionnées.")
-        
-        # Vérification des limites min et max pour les questions de type slider
         question = data.get('question')
         valeur_numerique = data.get('valeur_numerique')
-        
-        if question and valeur_numerique is not None:
-            # Vérifier si les limites min et max sont définies pour cette question
+        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+
+        # Vérification du type de question
+        type_nom = getattr(question.type, 'nom', None) if question else None
+        is_slider = type_nom and type_nom.lower() == 'slider'
+
+        if is_slider:
+            # Pour les sliders, il faut une valeur numérique et aucune proposition
+            if valeur_numerique is None:
+                raise serializers.ValidationError("Cette question attend une valeur numérique.")
+            if propositions_data:
+                raise serializers.ValidationError("Vous ne pouvez pas sélectionner de proposition pour une question de type slider.")
+        else:
+            # Pour les autres types, il faut des propositions et pas de valeur numérique
+            if not propositions_data:
+                raise serializers.ValidationError("Cette question attend une ou plusieurs propositions sélectionnées.")
+            if valeur_numerique is not None:
+                raise serializers.ValidationError("Vous ne pouvez pas fournir une valeur numérique pour cette question.")
+
+        # Vérification min/max pour les sliders
+        if is_slider and question:
             if question.min_value is not None and valeur_numerique < question.min_value:
                 raise serializers.ValidationError(f"La valeur numérique doit être supérieure ou égale à {question.min_value}.")
-                
             if question.max_value is not None and valeur_numerique > question.max_value:
                 raise serializers.ValidationError(f"La valeur numérique doit être inférieure ou égale à {question.max_value}.")
-        
+
+        # Vérification que chaque proposition appartient bien à la question
+        if not is_slider and question and propositions_data:
+            question_propositions_ids = set(question.propositions.values_list('id', flat=True))
+            for prop in propositions_data:
+                prop_id = prop.get('proposition')
+                if prop_id not in question_propositions_ids:
+                    raise serializers.ValidationError(f"La proposition {prop_id} n'appartient pas à la question {question.id}.")
+
         return data
 
     def create(self, validated_data):

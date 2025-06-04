@@ -75,13 +75,24 @@ class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
         return context
 
     def create(self, request, *args, **kwargs):
-        # Si le body est une liste, on fait un bulk create
         is_many = isinstance(request.data, list)
         serializer = self.get_serializer(data=request.data, many=is_many, context=self.get_serializer_context())
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data if not is_many else None)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        if not is_many:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        # Bulk : gestion partielle
+        results = []
+        errors = []
+        for idx, item in enumerate(request.data):
+            item_serializer = self.get_serializer(data=item, context=self.get_serializer_context())
+            if item_serializer.is_valid():
+                instance = item_serializer.save()
+                results.append(self.get_serializer(instance).data)
+            else:
+                errors.append({"index": idx, "errors": item_serializer.errors})
+        return Response({"created": results, "errors": errors}, status=status.HTTP_207_MULTI_STATUS)
 
 class PropositionSelectionneeViewSet(viewsets.ModelViewSet):
     queryset = PropositionSelectionnee.objects.all()
