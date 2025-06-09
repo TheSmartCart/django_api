@@ -3,7 +3,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee, ReponseUtilisateur
-from .serializers import QuestionSerializer, PropositionSerializer, TypeQuestionSerializer, PropositionSelectionneeSerializer, ReponseUtilisateurSerializer
+from .serializers import QuestionSerializer, PropositionSerializer, TypeQuestionSerializer, PropositionSelectionneeSerializer, ReponseUtilisateurSerializer, ReponseUtilisateurReadSerializer
 
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
@@ -68,6 +68,12 @@ class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return ReponseUtilisateur.objects.filter(utilisateur=user)
+    
+    def get_serializer_class(self):
+        """Utilise le serializer de lecture pour les actions GET, et le serializer d'écriture pour les autres."""
+        if self.action in ['list', 'retrieve']:
+            return ReponseUtilisateurReadSerializer
+        return ReponseUtilisateurSerializer
         
     def get_serializer_context(self):
         context = super().get_serializer_context()

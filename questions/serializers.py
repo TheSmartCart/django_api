@@ -61,6 +61,19 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
         fields = ['id', 'utilisateur', 'nom_utilisateur', 'question', 'titre_question', 
                  'date_creation', 'valeur_numerique', 'propositions_selectionnees']
         read_only_fields = ['utilisateur']
+
+class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
+    questionText = serializers.ReadOnlyField(source='question.title')
+    selectedOptions = serializers.SerializerMethodField()
+    sliderValue = serializers.ReadOnlyField(source='valeur_numerique')
+    
+    class Meta:
+        model = ReponseUtilisateur
+        fields = ['questionText', 'selectedOptions', 'sliderValue']
+    
+    def get_selectedOptions(self, obj):
+        """Retourne la liste des textes des propositions sélectionnées."""
+        return [prop_sel.proposition.texte for prop_sel in obj.propositions_selectionnees.all()]
     
     def validate(self, data):
         if isinstance(self.initial_data, list):
