@@ -2,15 +2,11 @@ from django.db import models
 
 class Enseigne(models.Model):
     nom = models.CharField(max_length=100)
-    logo = models.ImageField(upload_to='enseignes/logos/', blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    adresse = models.CharField(max_length=255, blank=True, null=True)
-    horaires_ouverture = models.CharField(max_length=255, blank=True, null=True)  # Could be JSON or specific format
+    logoUrl = models.ImageField(upload_to='enseignes/logos/', blank=True, null=True)
     statut = models.CharField(max_length=50, choices=[
-        ('ouvert', 'Ouvert'),
-        ('fermé', 'Fermé'),
-        ('en_pause', 'En Pause')
-    ], default='fermé')
+        ('actif', 'Actif'),
+        ('inactif', 'Inactif'),
+    ], default='Actif')
     
     def __str__(self):
         return self.nom
@@ -43,15 +39,12 @@ class Magasin(models.Model):
     telephone = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     
-    # Relation avec Enseigne (un magasin appartient à une enseigne)
     enseigne = models.ForeignKey('Enseigne', on_delete=models.CASCADE, related_name='magasins')
     
-    # Informations supplémentaires
     horaires = models.TextField(blank=True, null=True, help_text="Format JSON recommandé pour les horaires")
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     
-    # Statut du magasin
     statut = models.CharField(max_length=50, choices=[
         ('actif', 'Actif'),
         ('inactif', 'Inactif'),

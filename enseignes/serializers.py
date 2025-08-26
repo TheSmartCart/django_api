@@ -23,11 +23,7 @@ class MagasinSerializer(serializers.ModelSerializer):
                   'longitude', 'statut', 'date_creation', 'date_modification']
 
 class EnseigneSerializer(serializers.ModelSerializer):
-    produits = ProduitSerializer(many=True, read_only=True)
-    categories = CategorieSerializer(many=True, read_only=True)
-    magasins = MagasinSerializer(many=True, read_only=True)
     
     class Meta:
         model = Enseigne
-        fields = ['id', 'nom', 'logo', 'description', 'adresse', 'horaires_ouverture', 
-                  'statut', 'produits', 'categories', 'magasins']
+        fields = ['id', 'nom', 'logoUrl', 'statut']

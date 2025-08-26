@@ -4,7 +4,7 @@ from .models import Enseigne, Produit, Categorie, Magasin
 @admin.register(Enseigne)
 class EnseigneAdmin(admin.ModelAdmin):
     list_display = ('nom', 'statut')
-    search_fields = ('nom', 'description')
+    search_fields = ('nom',)
 
 @admin.register(Produit)
 class ProduitAdmin(admin.ModelAdmin):
