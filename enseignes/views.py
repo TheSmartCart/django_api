@@ -3,7 +3,7 @@ from .models import Enseigne, Produit, Categorie, Magasin
 from .serializers import EnseigneSerializer, ProduitSerializer, CategorieSerializer, MagasinSerializer
 
 class EnseigneViewSet(viewsets.ModelViewSet):
-    queryset = Enseigne.objects.all()
+    queryset = Enseigne.objects.all().prefetch_related('magasins')
     serializer_class = EnseigneSerializer
 
 class ProduitViewSet(viewsets.ModelViewSet):
