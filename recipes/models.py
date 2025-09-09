@@ -8,7 +8,7 @@ class Recette(models.Model):
     temps_preparation = models.CharField(max_length=50)
     difficulte = models.CharField(max_length=50, choices=[('Debutant', 'Debutant'), ('Intermediaire', 'Intermediaire'), ('Expert', 'Expert'), ('Chef etoile', 'Chef etoile')])
     date_creation = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Brouillon', 'Brouillon'), ('Inactif', 'Inactif')])
+    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Brouillon', 'Brouillon'), ('Inactif', 'Inactif')], default='Actif')
     utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recettes")
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to='recettes/', null=True, blank=True)

@@ -45,13 +45,13 @@ class RecetteAuthTests(APITestCase):
 		payload = {
 			"nom": "R3",
 			"temps_preparation": "15m",
-			"difficulte": "Debutant",
-			"status": "Actif"
+			"difficulte": "Debutant"
 		}
 		resp = self.client.post(url, payload, format='json')
 		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 		r = Recette.objects.get(nom="R3")
 		self.assertEqual(r.utilisateur, self.user1)
+		self.assertEqual(r.status, "Actif")
 
 	def test_ustensiles_is_list_of_objects(self):
 		r = Recette.objects.create(nom="Avec U", temps_preparation="5m", difficulte="Debutant", status="Actif", utilisateur=self.user1)
@@ -99,7 +99,6 @@ class RecetteAuthTests(APITestCase):
 			"nom": "Pâtes",
 			"temps_preparation": "12m",
 			"difficulte": "Debutant",
-			"status": "Actif",
 			"ustensiles": [
 				{"id": existing.id},
 				{"nom": "Passoire"},
@@ -127,7 +126,6 @@ class RecetteAuthTests(APITestCase):
 			"nom": "Test défaut",
 			"temps_preparation": "5m",
 			"difficulte": "Debutant",
-			"status": "Actif",
 			"ustensiles": ["Fouet"]
 		}
 		resp = self.client.post(url, payload, format='json')

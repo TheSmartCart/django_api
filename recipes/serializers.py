@@ -48,6 +48,7 @@ class RecetteSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'utilisateur': {'read_only': True},
             'date_creation': {'read_only': True},
+            'status': {'read_only': True},
         }
     
     def get_ingredients(self, obj):
