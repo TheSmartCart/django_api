@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import (Recette, Ingredient, IngredientRecette, Etape, Ustensile, UstensileRecette)
 
 class EtapeSerializer(serializers.ModelSerializer):
@@ -25,6 +26,9 @@ class UstensileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ustensile
         fields = '__all__'
+        extra_kwargs = {
+            'status': {'required': False, 'default': 'Actif'}
+        }
 
 class UstensileRecetteDetailSerializer(serializers.ModelSerializer):
     ustensile = UstensileSerializer(read_only=True)
@@ -41,14 +45,21 @@ class RecetteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recette
         fields = '__all__'
+        extra_kwargs = {
+            'utilisateur': {'read_only': True},
+            'date_creation': {'read_only': True},
+        }
     
     def get_ingredients(self, obj):
         ingredients_recette = IngredientRecette.objects.filter(recette=obj, status='Actif')
         return IngredientRecetteDetailSerializer(ingredients_recette, many=True).data
     
+    @extend_schema_field(UstensileSerializer(many=True))
     def get_ustensiles(self, obj):
-        ustensiles_recette = UstensileRecette.objects.filter(recette=obj, status='Actif')
-        return UstensileRecetteDetailSerializer(ustensiles_recette, many=True).data
+        """Retourne uniquement la liste des objets Ustensile actifs pour la recette."""
+        ustensiles_qs = Ustensile.objects.filter(recettes_utilisant__recette=obj,
+                                                recettes_utilisant__status='Actif')
+        return UstensileSerializer(ustensiles_qs, many=True).data
 
 
 class IngredientRecetteSerializer(serializers.ModelSerializer):
