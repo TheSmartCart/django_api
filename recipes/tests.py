@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from .models import Recette
 from .models import Ustensile, UstensileRecette
+from .models import Ingredient, IngredientRecette
 
 User = get_user_model()
 
@@ -70,6 +71,23 @@ class RecetteAuthTests(APITestCase):
 		self.assertIsInstance(recette["ustensiles"], list)
 		# Chaque entrée doit être un objet avec au moins id et nom
 		self.assertTrue(all(isinstance(u, dict) and {"id", "nom"}.issubset(u.keys()) for u in recette["ustensiles"]))
+
+	def test_ingredients_is_list_of_objects(self):
+		r = Recette.objects.create(nom="Avec I", temps_preparation="7m", difficulte="Debutant", utilisateur=self.user1)
+		i1 = Ingredient.objects.create(nom="Sel")
+		i2 = Ingredient.objects.create(nom="Poivre")
+		IngredientRecette.objects.create(recette=r, ingredient=i1, quantite=1, unite="pincée")
+		IngredientRecette.objects.create(recette=r, ingredient=i2, quantite=1, unite="tour de moulin")
+
+		url = reverse('recette-list')
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, status.HTTP_200_OK)
+		recette = next((x for x in resp.data if x["nom"] == "Avec I"), None)
+		self.assertIsNotNone(recette)
+		self.assertIn("ingredients", recette)
+		self.assertIsInstance(recette["ingredients"], list)
+		self.assertTrue(all(isinstance(i, dict) and {"id", "nom"}.issubset(i.keys()) for i in recette["ingredients"]))
 
 	def test_recette_has_description_and_image_fields(self):
 		r = Recette.objects.create(

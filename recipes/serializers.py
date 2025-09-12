@@ -51,9 +51,12 @@ class RecetteSerializer(serializers.ModelSerializer):
             'status': {'read_only': True},
         }
     
+    @extend_schema_field(IngredientSerializer(many=True))
     def get_ingredients(self, obj):
-        ingredients_recette = IngredientRecette.objects.filter(recette=obj, status='Actif')
-        return IngredientRecetteDetailSerializer(ingredients_recette, many=True).data
+        """Retourne uniquement la liste des objets Ingredient actifs liés à la recette."""
+        ingredients_qs = Ingredient.objects.filter(recettes_utilisant__recette=obj,
+                                                  recettes_utilisant__status='Actif').distinct()
+        return IngredientSerializer(ingredients_qs, many=True).data
     
     @extend_schema_field(UstensileSerializer(many=True))
     def get_ustensiles(self, obj):
