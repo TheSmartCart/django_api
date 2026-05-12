@@ -4,7 +4,7 @@ from .models import Enseigne, Produit, Categorie, Magasin
 class CategorieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categorie
-        fields = ['id', 'nom', 'description', 'statut']
+        fields = ['id', 'nom', 'description', 'image', 'statut']
 
 class ProduitSerializer(serializers.ModelSerializer):
     categorie_nom = serializers.ReadOnlyField(source='categorie.nom')

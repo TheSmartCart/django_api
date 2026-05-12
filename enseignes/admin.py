@@ -17,6 +17,7 @@ class CategorieAdmin(admin.ModelAdmin):
     list_display = ('nom', 'enseigne', 'statut')
     list_filter = ('enseigne', 'statut')
     search_fields = ('nom',)
+    readonly_fields = ()
 
 @admin.register(Magasin)
 class MagasinAdmin(admin.ModelAdmin):

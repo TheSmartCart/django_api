@@ -25,6 +25,7 @@ class Produit(models.Model):
 class Categorie(models.Model):
     nom = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='categories/images/', blank=True, null=True)
     enseigne = models.ForeignKey(Enseigne, on_delete=models.CASCADE, related_name='categories')
     statut = models.CharField(max_length=50, default='active')
     
