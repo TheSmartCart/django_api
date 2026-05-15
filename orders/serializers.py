@@ -18,7 +18,7 @@ class MagasinOrderSerializer(serializers.ModelSerializer):
 
 
 class ArticleCommandeInputSerializer(serializers.Serializer):
-    produit = serializers.IntegerField()
+    produit = serializers.CharField()
     quantite = serializers.IntegerField(min_value=1, default=1)
 
 
@@ -27,13 +27,13 @@ class ArticleCommandeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ArticleCommande
-        fields = ['id', 'commande', 'produit', 'quantite', 'prix_unitaire']
+        fields = ['id', 'produit', 'quantite', 'prix_unitaire']
 
 
 class CommandeListSerializer(serializers.ModelSerializer):
     magasin = MagasinOrderSerializer(read_only=True)
     articles = ArticleCommandeSerializer(many=True, read_only=True)
-    prix_total = serializers.ReadOnlyField()
+    prix_total = serializers.FloatField(read_only=True)
     
     class Meta:
         model = Commande
@@ -42,7 +42,7 @@ class CommandeListSerializer(serializers.ModelSerializer):
 class CommandeDetailSerializer(serializers.ModelSerializer):
     magasin = MagasinOrderSerializer(read_only=True)
     articles = ArticleCommandeSerializer(many=True, read_only=True)
-    prix_total = serializers.ReadOnlyField()
+    prix_total = serializers.FloatField(read_only=True)
     
     class Meta:
         model = Commande
@@ -61,4 +61,12 @@ class CommandeCreateSerializer(serializers.Serializer):
 class StatutUpdateSerializer(serializers.Serializer):
     statut = serializers.ChoiceField(
         choices=['en_attente', 'en_preparation', 'prete', 'recuperee', 'annulee']
+    )
+
+
+class CommandePatchSerializer(serializers.Serializer):
+    articles = ArticleCommandeInputSerializer(many=True, required=False)
+    statut = serializers.ChoiceField(
+        choices=['en_attente', 'en_preparation', 'prete', 'recuperee', 'annulee'],
+        required=False,
     )
