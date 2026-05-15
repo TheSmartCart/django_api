@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import CommandeViewSet, ArticleCommandeViewSet
 
 router = DefaultRouter()
-router.register(r'commandes', CommandeViewSet)
+router.register(r'commandes', CommandeViewSet, basename='commandes')
 router.register(r'articles-commande', ArticleCommandeViewSet)
 
 urlpatterns = [

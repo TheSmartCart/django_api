@@ -3,15 +3,18 @@ from users.models import CustomUser
 from enseignes.models import Produit, Magasin
 
 class Commande(models.Model):
-    utilisateur = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='commandes')
-    date_creation = models.DateTimeField(auto_now_add=True)
-    date_modification = models.DateTimeField(auto_now=True)
-    statut = models.CharField(max_length=50, choices=[
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
         ('en_preparation', 'En préparation'),
         ('prete', 'Prête'),
         ('recuperee', 'Récupérée'),
-        ('annulee', 'Annulée')
-    ], default='en_preparation')
+        ('annulee', 'Annulée'),
+    ]
+
+    utilisateur = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='commandes')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='en_attente')
     magasin = models.ForeignKey(Magasin, on_delete=models.CASCADE, related_name='commandes')
     
     def __str__(self):

@@ -1,32 +1,64 @@
 from rest_framework import serializers
 from .models import Commande, ArticleCommande
-from enseignes.serializers import ProduitSerializer, MagasinSerializer
+from enseignes.models import Magasin, Produit
+
+
+class ProduitOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Produit
+        fields = ['id', 'nom', 'description', 'prix', 'image']
+
+
+class MagasinOrderSerializer(serializers.ModelSerializer):
+    enseigne_nom = serializers.ReadOnlyField(source='enseigne.nom')
+
+    class Meta:
+        model = Magasin
+        fields = ['id', 'nom', 'enseigne_nom', 'adresse', 'code_postal', 'ville']
+
+
+class ArticleCommandeInputSerializer(serializers.Serializer):
+    produit = serializers.IntegerField()
+    quantite = serializers.IntegerField(min_value=1, default=1)
+
 
 class ArticleCommandeSerializer(serializers.ModelSerializer):
-    produit_nom = serializers.ReadOnlyField(source='produit.nom')
-    prix_total = serializers.ReadOnlyField()
-    
+    produit = ProduitOrderSerializer(read_only=True)
+
     class Meta:
         model = ArticleCommande
-        fields = ['id', 'commande', 'produit', 'produit_nom', 'quantite', 'prix_unitaire', 'prix_total']
+        fields = ['id', 'commande', 'produit', 'quantite', 'prix_unitaire']
+
 
 class CommandeListSerializer(serializers.ModelSerializer):
-    utilisateur_nom = serializers.ReadOnlyField(source='utilisateur.username')
-    magasin_nom = serializers.ReadOnlyField(source='magasin.nom')
-    prix_total = serializers.ReadOnlyField()
-    
-    class Meta:
-        model = Commande
-        fields = ['id', 'utilisateur', 'utilisateur_nom', 'date_creation', 'statut', 
-                  'magasin', 'magasin_nom', 'prix_total']
-
-class CommandeDetailSerializer(serializers.ModelSerializer):
-    utilisateur_nom = serializers.ReadOnlyField(source='utilisateur.username')
-    magasin_nom = serializers.ReadOnlyField(source='magasin.nom')
+    magasin = MagasinOrderSerializer(read_only=True)
     articles = ArticleCommandeSerializer(many=True, read_only=True)
     prix_total = serializers.ReadOnlyField()
     
     class Meta:
         model = Commande
-        fields = ['id', 'utilisateur', 'utilisateur_nom', 'date_creation', 'date_modification',
-                  'statut', 'magasin', 'magasin_nom', 'articles', 'prix_total']
+        fields = ['id', 'date_creation', 'statut', 'magasin', 'articles', 'prix_total']
+
+class CommandeDetailSerializer(serializers.ModelSerializer):
+    magasin = MagasinOrderSerializer(read_only=True)
+    articles = ArticleCommandeSerializer(many=True, read_only=True)
+    prix_total = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = Commande
+        fields = ['id', 'date_creation', 'date_modification', 'statut', 'magasin', 'articles', 'prix_total']
+
+
+class CommandeCreateSerializer(serializers.Serializer):
+    magasin = serializers.IntegerField()
+    articles = ArticleCommandeInputSerializer(many=True)
+    statut = serializers.ChoiceField(
+        choices=['en_attente', 'en_preparation', 'prete', 'recuperee', 'annulee'],
+        default='en_attente'
+    )
+
+
+class StatutUpdateSerializer(serializers.Serializer):
+    statut = serializers.ChoiceField(
+        choices=['en_attente', 'en_preparation', 'prete', 'recuperee', 'annulee']
+    )
