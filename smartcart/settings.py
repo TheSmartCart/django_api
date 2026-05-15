@@ -72,10 +72,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Token valide 1 jour
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), # Refresh token valide 7 jours
-    'ROTATE_REFRESH_TOKENS': True,  # Rafraîchir automatiquement les tokens
-    'BLACKLIST_AFTER_ROTATION': True,  # Empêcher l'utilisation des anciens tokens
+    'ACCESS_TOKEN_LIFETIME': timedelta(weeks=4),
+    'REFRESH_TOKEN_LIFETIME': timedelta(weeks=8),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 ROOT_URLCONF = 'smartcart.urls'
