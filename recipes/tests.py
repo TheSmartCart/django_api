@@ -11,15 +11,12 @@ User = get_user_model()
 
 class RecetteAuthTests(APITestCase):
 	def setUp(self):
-		# Crée deux utilisateurs
 		self.user1 = User.objects.create_user(username="u1", password="p1")
 		self.user2 = User.objects.create_user(username="u2", password="p2")
 
-		# Recettes pour chacun
 		Recette.objects.create(nom="R1", temps_preparation="10m", difficulte="Debutant", status="Actif", utilisateur=self.user1)
 		Recette.objects.create(nom="R2", temps_preparation="20m", difficulte="Intermediaire", status="Actif", utilisateur=self.user2)
 
-		# Obtenir token JWT pour user1
 		url_token = reverse('token_obtain_pair')
 		resp = self.client.post(url_token, {"username": "u1", "password": "p1"}, format='json')
 		self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -35,7 +32,6 @@ class RecetteAuthTests(APITestCase):
 		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
 		resp = self.client.get(url)
 		self.assertEqual(resp.status_code, status.HTTP_200_OK)
-		# Ne doit retourner que la recette de user1
 		names = [r["nom"] for r in resp.data]
 		self.assertIn("R1", names)
 		self.assertNotIn("R2", names)
@@ -69,7 +65,6 @@ class RecetteAuthTests(APITestCase):
 		self.assertIsNotNone(recette)
 		self.assertIn("ustensiles", recette)
 		self.assertIsInstance(recette["ustensiles"], list)
-		# Chaque entrée doit être un objet avec au moins id et nom
 		self.assertTrue(all(isinstance(u, dict) and {"id", "nom"}.issubset(u.keys()) for u in recette["ustensiles"]))
 
 	def test_ingredients_is_list_of_objects(self):
@@ -104,7 +99,6 @@ class RecetteAuthTests(APITestCase):
 		self.assertEqual(resp.status_code, status.HTTP_200_OK)
 		recette = next((x for x in resp.data if x["nom"] == "Avec champs"), None)
 		self.assertIsNotNone(recette)
-		# Les champs doivent exister (image peut être null)
 		self.assertIn("description", recette)
 		self.assertIn("image", recette)
 		self.assertEqual(recette["description"], "Une super recette")

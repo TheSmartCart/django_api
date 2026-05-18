@@ -62,25 +62,26 @@ class ReponseUtilisateurSerializer(serializers.ModelSerializer):
                  'date_creation', 'valeur_numerique', 'propositions_selectionnees']
         read_only_fields = ['utilisateur']
 
-class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
-    questionText = serializers.ReadOnlyField(source='question.title')
-    selectedOptions = serializers.SerializerMethodField()
-    sliderValue = serializers.ReadOnlyField(source='valeur_numerique')
-    
-    class Meta:
-        model = ReponseUtilisateur
-        fields = ['questionText', 'selectedOptions', 'sliderValue']
-    
-    def get_selectedOptions(self, obj):
-        """Retourne la liste des textes des propositions sélectionnées."""
-        return [prop_sel.proposition.texte for prop_sel in obj.propositions_selectionnees.all()]
-    
     def validate(self, data):
         if isinstance(self.initial_data, list):
             return data
-        question = data.get('question')
-        valeur_numerique = data.get('valeur_numerique')
-        propositions_data = self.initial_data.get('propositions_selectionnees', [])
+            
+        # Support partial updates (PATCH) by merging with self.instance values
+        if self.instance:
+            question = data['question'] if 'question' in data else self.instance.question
+            valeur_numerique = data['valeur_numerique'] if 'valeur_numerique' in data else self.instance.valeur_numerique
+            
+            if 'propositions_selectionnees' in self.initial_data:
+                propositions_data = self.initial_data.get('propositions_selectionnees', [])
+                has_propositions = len(propositions_data) > 0
+            else:
+                propositions_data = []
+                has_propositions = self.instance.propositions_selectionnees.exists()
+        else:
+            question = data.get('question')
+            valeur_numerique = data.get('valeur_numerique')
+            propositions_data = self.initial_data.get('propositions_selectionnees', [])
+            has_propositions = len(propositions_data) > 0
 
         # Vérification du type de question
         type_nom = getattr(question.type, 'nom', None) if question else None
@@ -90,17 +91,17 @@ class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
             # Pour les sliders, il faut une valeur numérique et aucune proposition
             if valeur_numerique is None:
                 raise serializers.ValidationError("Cette question attend une valeur numérique.")
-            if propositions_data:
+            if has_propositions:
                 raise serializers.ValidationError("Vous ne pouvez pas sélectionner de proposition pour une question de type slider.")
         else:
             # Pour les autres types, il faut des propositions et pas de valeur numérique
-            if not propositions_data:
+            if not has_propositions:
                 raise serializers.ValidationError("Cette question attend une ou plusieurs propositions sélectionnées.")
             if valeur_numerique is not None:
                 raise serializers.ValidationError("Vous ne pouvez pas fournir une valeur numérique pour cette question.")
 
         # Vérification min/max pour les sliders
-        if is_slider and question:
+        if is_slider and question and valeur_numerique is not None:
             if question.min_value is not None and valeur_numerique < question.min_value:
                 raise serializers.ValidationError(f"La valeur numérique doit être supérieure ou égale à {question.min_value}.")
             if question.max_value is not None and valeur_numerique > question.max_value:
@@ -170,3 +171,16 @@ class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
                     )
         
         return instance
+
+class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
+    questionText = serializers.ReadOnlyField(source='question.title')
+    selectedOptions = serializers.SerializerMethodField()
+    sliderValue = serializers.ReadOnlyField(source='valeur_numerique')
+    
+    class Meta:
+        model = ReponseUtilisateur
+        fields = ['questionText', 'selectedOptions', 'sliderValue']
+    
+    def get_selectedOptions(self, obj):
+        """Retourne la liste des textes des propositions sélectionnées."""
+        return [prop_sel.proposition.texte for prop_sel in obj.propositions_selectionnees.all()]
