@@ -16,21 +16,21 @@ class Produit(models.Model):
     description = models.TextField(blank=True, null=True)
     prix = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='produits/images/', blank=True, null=True)
-    enseigne = models.ForeignKey(Enseigne, on_delete=models.CASCADE, related_name='produits')
+    magasin = models.ForeignKey('Magasin', on_delete=models.CASCADE, related_name='produits')
     categorie = models.ForeignKey('Categorie', on_delete=models.SET_NULL, null=True, related_name='produits')
     
     def __str__(self):
-        return f"{self.nom} - {self.enseigne.nom}"
+        return f"{self.nom} - {self.magasin.nom}"
 
 class Categorie(models.Model):
     nom = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='categories/images/', blank=True, null=True)
-    enseigne = models.ForeignKey(Enseigne, on_delete=models.CASCADE, related_name='categories')
+    magasin = models.ForeignKey('Magasin', on_delete=models.CASCADE, related_name='categories')
     statut = models.CharField(max_length=50, default='active')
     
     def __str__(self):
-        return f"{self.nom} - {self.enseigne.nom}"
+        return f"{self.nom} - {self.magasin.nom}"
 
 class Magasin(models.Model):
     nom = models.CharField(max_length=100)

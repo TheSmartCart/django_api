@@ -1,4 +1,6 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from .models import Enseigne, Produit, Categorie, Magasin
 from .serializers import EnseigneSerializer, ProduitSerializer, CategorieSerializer, MagasinSerializer
 
@@ -12,9 +14,9 @@ class ProduitViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Produit.objects.all()
-        enseigne = self.request.query_params.get('enseigne')
-        if enseigne:
-            queryset = queryset.filter(enseigne_id=enseigne)
+        magasin = self.request.query_params.get('magasin')
+        if magasin:
+            queryset = queryset.filter(magasin_id=magasin)
         categorie = self.request.query_params.get('categorie')
         if categorie:
             queryset = queryset.filter(categorie_id=categorie)
@@ -26,9 +28,9 @@ class CategorieViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Categorie.objects.all()
-        enseigne = self.request.query_params.get('enseigne')
-        if enseigne:
-            queryset = queryset.filter(enseigne_id=enseigne)
+        magasin = self.request.query_params.get('magasin')
+        if magasin:
+            queryset = queryset.filter(magasin_id=magasin)
         return queryset
 
 class MagasinViewSet(viewsets.ModelViewSet):
@@ -50,3 +52,20 @@ class MagasinViewSet(viewsets.ModelViewSet):
         if statut:
             queryset = queryset.filter(statut=statut)
         return queryset
+
+    @action(detail=True, methods=['get'])
+    def produits(self, request, pk=None):
+        magasin = self.get_object()
+        produits = magasin.produits.all()
+        categorie = request.query_params.get('categorie')
+        if categorie:
+            produits = produits.filter(categorie_id=categorie)
+        serializer = ProduitSerializer(produits, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def categories(self, request, pk=None):
+        magasin = self.get_object()
+        categories = magasin.categories.all()
+        serializer = CategorieSerializer(categories, many=True, context={'request': request})
+        return Response(serializer.data)
