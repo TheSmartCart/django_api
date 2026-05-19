@@ -8,14 +8,14 @@ class EnseigneAdmin(admin.ModelAdmin):
 
 @admin.register(Produit)
 class ProduitAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'prix', 'magasin', 'categorie')
-    list_filter = ('magasin', 'categorie')
+    list_display = ('nom', 'prix', 'categorie')
+    list_filter = ('magasins', 'categorie')
     search_fields = ('nom', 'description')
 
 @admin.register(Categorie)
 class CategorieAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'magasin', 'statut')
-    list_filter = ('magasin', 'statut')
+    list_display = ('nom', 'statut')
+    list_filter = ('magasins', 'statut')
     search_fields = ('nom',)
     readonly_fields = ()
 

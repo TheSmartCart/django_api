@@ -4,14 +4,14 @@ from .models import Enseigne, Produit, Categorie, Magasin
 class CategorieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categorie
-        fields = ['id', 'nom', 'description', 'image', 'statut', 'magasin']
+        fields = ['id', 'nom', 'description', 'image', 'statut', 'magasins']
 
 class ProduitSerializer(serializers.ModelSerializer):
     categorie_nom = serializers.ReadOnlyField(source='categorie.nom')
     
     class Meta:
         model = Produit
-        fields = ['id', 'nom', 'description', 'prix', 'image', 'categorie', 'categorie_nom', 'magasin']
+        fields = ['id', 'nom', 'description', 'prix', 'image', 'categorie', 'categorie_nom', 'magasins']
 
 class MagasinSerializer(serializers.ModelSerializer):
     enseigne_nom = serializers.ReadOnlyField(source='enseigne.nom')
