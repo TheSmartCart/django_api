@@ -193,18 +193,28 @@ class CommandeViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def _create_articles(commande, articles_data):
-        enseigne = commande.magasin.enseigne
+        magasin = commande.magasin
+
         for article_data in articles_data:
             identifiant = str(article_data['produit'])
-            
+
             produit = None
+
             if identifiant.isdigit():
-                produit = Produit.objects.filter(id=int(identifiant), enseigne=enseigne).first()
-                
+                produit = Produit.objects.filter(
+                    id=int(identifiant),
+                    magasins=magasin
+                ).first()
+
             if not produit:
                 from django.shortcuts import get_object_or_404
-                produit = get_object_or_404(Produit, nom=identifiant, enseigne=enseigne)
-                
+
+                produit = get_object_or_404(
+                    Produit,
+                    nom=identifiant,
+                    magasins=magasin
+                )
+
             ArticleCommande.objects.create(
                 commande=commande,
                 produit=produit,
