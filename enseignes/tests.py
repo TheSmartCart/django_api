@@ -1,3 +1,4 @@
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -10,10 +11,8 @@ class EnseignesAPITestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client.force_authenticate(user=self.user)
-        
+
         self.enseigne = Enseigne.objects.create(nom='Carrefour', statut='actif')
-        self.categorie = Categorie.objects.create(nom='Épicerie', enseigne=self.enseigne, statut='active')
-        self.produit = Produit.objects.create(nom='Pâtes', prix=1.50, enseigne=self.enseigne, categorie=self.categorie)
         self.magasin = Magasin.objects.create(
             nom='Carrefour Market',
             adresse='123 Rue de Paris',
@@ -22,6 +21,11 @@ class EnseignesAPITestCase(APITestCase):
             enseigne=self.enseigne,
             statut='actif'
         )
+        self.categorie = Categorie.objects.create(nom='Épicerie', statut='active')
+        self.categorie.magasins.set([self.magasin])
+
+        self.produit = Produit.objects.create(nom='Pâtes', prix=1.50, categorie=self.categorie)
+        self.produit.magasins.set([self.magasin])
 
     def test_list_enseignes(self):
         url = reverse('enseigne-list')
@@ -45,12 +49,21 @@ class EnseignesAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
-    def test_filter_categories_by_enseigne(self):
+    def test_filter_categories_by_magasin(self):
         other_enseigne = Enseigne.objects.create(nom='Leclerc', statut='actif')
-        other_cat = Categorie.objects.create(nom='Boulangerie', enseigne=other_enseigne)
-        
+        other_magasin = Magasin.objects.create(
+            nom='Leclerc Centre',
+            adresse='99 Rue Victor Hugo',
+            code_postal='33000',
+            ville='Bordeaux',
+            enseigne=other_enseigne,
+            statut='actif'
+        )
+        other_cat = Categorie.objects.create(nom='Boulangerie')
+        other_cat.magasins.set([other_magasin])
+
         url = reverse('categorie-list')
-        response = self.client.get(f"{url}?enseigne={self.enseigne.id}")
+        response = self.client.get(f"{url}?magasin={self.magasin.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['nom'], 'Épicerie')
@@ -59,7 +72,6 @@ class EnseignesAPITestCase(APITestCase):
         url = reverse('categorie-list')
         data = {
             'nom': 'Fruits & Légumes',
-            'enseigne': self.enseigne.id,
             'statut': 'active'
         }
         response = self.client.post(url, data, format='json')
@@ -74,7 +86,7 @@ class EnseignesAPITestCase(APITestCase):
 
     def test_filter_produits(self):
         url = reverse('produit-list')
-        response = self.client.get(f"{url}?enseigne={self.enseigne.id}&categorie={self.categorie.id}")
+        response = self.client.get(f"{url}?magasin={self.magasin.id}&categorie={self.categorie.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
@@ -83,7 +95,6 @@ class EnseignesAPITestCase(APITestCase):
         data = {
             'nom': 'Riz',
             'prix': 2.30,
-            'enseigne': self.enseigne.id,
             'categorie': self.categorie.id
         }
         response = self.client.post(url, data, format='json')
@@ -115,3 +126,38 @@ class EnseignesAPITestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Magasin.objects.filter(nom='Carrefour Express').exists())
+
+    def test_filter_magasins_by_code_postal(self):
+        url = reverse('magasin-list')
+        response = self.client.get(f"{url}?code_postal=75001")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['nom'], 'Carrefour Market')
+
+
+class EnseignesModelStrTestCase(TestCase):
+
+    def setUp(self):
+        self.enseigne = Enseigne.objects.create(nom='Leclerc', statut='actif')
+        self.magasin = Magasin.objects.create(
+            nom='Leclerc Lyon',
+            adresse='1 Rue Victor Hugo',
+            code_postal='69001',
+            ville='Lyon',
+            enseigne=self.enseigne,
+            statut='actif'
+        )
+        self.categorie = Categorie.objects.create(nom='Crèmerie', statut='active')
+        self.produit = Produit.objects.create(nom='Beurre', prix=1.80)
+
+    def test_enseigne_str(self):
+        self.assertEqual(str(self.enseigne), 'Leclerc')
+
+    def test_produit_str(self):
+        self.assertEqual(str(self.produit), 'Beurre')
+
+    def test_categorie_str(self):
+        self.assertEqual(str(self.categorie), 'Crèmerie')
+
+    def test_magasin_str(self):
+        self.assertEqual(str(self.magasin), 'Leclerc Lyon - Lyon (Leclerc)')

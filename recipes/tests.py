@@ -1,3 +1,4 @@
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -157,3 +158,163 @@ class RecetteAuthTests(APITestCase):
 			resp = self.client.post(url, {"nom": "Spatule"}, format='json')
 		self.assertIn(resp.status_code, (status.HTTP_201_CREATED, status.HTTP_200_OK))
 		self.assertEqual(Ustensile.objects.get(nom="Spatule").status, "Actif")
+
+	def test_create_recipe_with_ustensiles_as_string(self):
+		url = reverse('recette-list')
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+		payload = {
+			"nom": "Recette String Ust",
+			"temps_preparation": "10m",
+			"difficulte": "Debutant",
+			"ustensiles": "Spatule, Bol",
+		}
+		resp = self.client.post(url, payload, format='json')
+		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+		self.assertIn("Spatule", [u["nom"] for u in resp.data["ustensiles"]])
+
+	def test_create_recipe_with_invalid_ustensile_id(self):
+		url = reverse('recette-list')
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+		payload = {
+			"nom": "Recette Bad ID",
+			"temps_preparation": "5m",
+			"difficulte": "Debutant",
+			"ustensiles": [{"id": 99999}],
+		}
+		resp = self.client.post(url, payload, format='json')
+		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(len(resp.data["ustensiles"]), 0)
+
+	def test_create_recipe_with_non_dict_step(self):
+		url = reverse('recette-list')
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+		payload = {
+			"nom": "Recette Non-Dict Step",
+			"temps_preparation": "5m",
+			"difficulte": "Debutant",
+			"etapes": ["not a dict", {"description": "Étape valide"}],
+		}
+		resp = self.client.post(url, payload, format='json')
+		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(len(resp.data["etapes"]), 1)
+
+	def test_create_recipe_with_step_without_description(self):
+		url = reverse('recette-list')
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+		payload = {
+			"nom": "Recette No Desc Step",
+			"temps_preparation": "5m",
+			"difficulte": "Debutant",
+			"etapes": [{"ordre": 1}, {"description": "Bonne étape"}],
+		}
+		resp = self.client.post(url, payload, format='json')
+		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(len(resp.data["etapes"]), 1)
+
+
+class RecettesModelStrTestCase(TestCase):
+
+	def setUp(self):
+		from django.contrib.auth import get_user_model
+		User = get_user_model()
+		self.user = User.objects.create_user(username='rstruser', password='pass')
+		self.recette = Recette.objects.create(
+			nom="Ma Recette",
+			temps_preparation="20m",
+			difficulte="Debutant",
+			utilisateur=self.user
+		)
+		self.ingredient = Ingredient.objects.create(nom="Farine")
+		self.ingredientrecette = IngredientRecette.objects.create(
+			recette=self.recette,
+			ingredient=self.ingredient,
+			quantite=200,
+			unite="g"
+		)
+		self.ustensile = Ustensile.objects.create(nom="Rouleau")
+		self.ustensilerecette = UstensileRecette.objects.create(
+			recette=self.recette,
+			ustensile=self.ustensile
+		)
+		from recipes.models import Etape
+		self.etape = Etape.objects.create(
+			recette=self.recette,
+			description="Mélanger",
+			ordre=1
+		)
+
+	def test_recette_str(self):
+		self.assertEqual(str(self.recette), "Ma Recette")
+
+	def test_ingredient_str(self):
+		self.assertEqual(str(self.ingredient), "Farine")
+
+	def test_ingredientrecette_str(self):
+		s = str(self.ingredientrecette)
+		self.assertIn("Farine", s)
+		self.assertIn("Ma Recette", s)
+
+	def test_ustensile_str(self):
+		self.assertEqual(str(self.ustensile), "Rouleau")
+
+	def test_ustensilerecette_str(self):
+		s = str(self.ustensilerecette)
+		self.assertIn("Rouleau", s)
+		self.assertIn("Ma Recette", s)
+
+	def test_etape_str(self):
+		s = str(self.etape)
+		self.assertIn("Ma Recette", s)
+		self.assertIn("1", s)
+
+
+class RecetteGetQuerysetUnauthTestCase(TestCase):
+
+	def test_get_queryset_unauthenticated(self):
+		from recipes.views import RecetteViewSet
+		from unittest.mock import MagicMock
+		viewset = RecetteViewSet()
+		mock_request = MagicMock()
+		mock_request.user = None
+		viewset.request = mock_request
+		qs = viewset.get_queryset()
+		self.assertEqual(qs.count(), 0)
+
+
+class RecettePerformCreateTestCase(APITestCase):
+
+	def setUp(self):
+		from django.contrib.auth import get_user_model
+		User = get_user_model()
+		self.user = User.objects.create_user(username='pcruser', password='pass')
+
+	def test_perform_create_assigns_user(self):
+		from recipes.views import RecetteViewSet
+		from unittest.mock import MagicMock
+		viewset = RecetteViewSet()
+		mock_request = MagicMock()
+		mock_request.user = self.user
+		viewset.request = mock_request
+		mock_serializer = MagicMock()
+		viewset.perform_create(mock_serializer)
+		mock_serializer.save.assert_called_once_with(utilisateur=self.user)
+
+	def test_create_recipe_with_invalid_type_payloads(self):
+		url = reverse('recette-list')
+		token_url = reverse('token_obtain_pair')
+		resp_token = self.client.post(token_url, {"username": "pcruser", "password": "pass"}, format='json')
+		access = resp_token.data['access']
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+		
+		payload = {
+			"nom": "Recette Invalid Types",
+			"temps_preparation": "10m",
+			"difficulte": "Debutant",
+			"ustensiles": 123,
+			"etapes": 456
+		}
+		resp = self.client.post(url, payload, format='json')
+		self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(len(resp.data["ustensiles"]), 0)
+		self.assertEqual(len(resp.data["etapes"]), 0)
+

@@ -122,3 +122,6 @@ class UserTestCase(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, 'updatedemail@example.com')
         self.assertEqual(self.user.first_name, 'UpdatedFirstPut')
+
+    def test_custom_user_str(self):
+        self.assertEqual(str(self.user), self.username)

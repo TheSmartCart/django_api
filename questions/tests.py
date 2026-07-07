@@ -1,3 +1,4 @@
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -253,3 +254,282 @@ class QuestionEndpointsTestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
+
+    def test_create_question_with_propositions(self):
+        url = reverse('question-list')
+        data = {
+            'title': 'Q avec props',
+            'type': self.type_q.id,
+            'status': 'Actif',
+            'propositions': [
+                {'texte': 'Prop A', 'statut': 'Actif'},
+                {'texte': 'Prop B', 'statut': 'Actif'},
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        q = Question.objects.get(title='Q avec props')
+        self.assertEqual(q.propositions.count(), 2)
+
+    def test_create_question_without_propositions(self):
+        url = reverse('question-list')
+        data = {
+            'title': 'Q sans props',
+            'type': self.type_q.id,
+            'status': 'Brouillon',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_update_question_with_propositions(self):
+        url = reverse('question-detail', kwargs={'pk': self.question.id})
+        data = {
+            'title': 'Updated Question',
+            'type': self.type_q.id,
+            'status': 'Inactif',
+            'propositions': [
+                {'texte': 'New Prop', 'statut': 'Actif'},
+            ]
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'Updated Question')
+
+    def test_update_question_without_propositions(self):
+        url = reverse('question-detail', kwargs={'pk': self.question.id})
+        data = {
+            'title': 'Partially Updated',
+            'type': self.type_q.id,
+            'status': 'Actif',
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class QuestionsModelStrTestCase(TestCase):
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(username='qstruser', password='pass')
+        self.type_q = TypeQuestion.objects.create(nom='MonType')
+        self.question = Question.objects.create(
+            title='Ma Question',
+            type=self.type_q,
+            status='Actif'
+        )
+        self.prop = Proposition.objects.create(question=self.question, texte='Ma Prop')
+
+    def test_type_question_str(self):
+        self.assertEqual(str(self.type_q), 'MonType')
+
+    def test_question_str(self):
+        self.assertEqual(str(self.question), 'Ma Question')
+
+    def test_proposition_str(self):
+        self.assertEqual(str(self.prop), 'Ma Prop')
+
+    def test_reponse_utilisateur_str(self):
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=5.0
+        )
+        s = str(reponse)
+        self.assertIn('qstruser', s)
+        self.assertIn('Ma Question', s)
+
+    def test_proposition_selectionnee_str(self):
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        ps = PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop)
+        self.assertEqual(str(ps), 'Ma Prop')
+
+    def test_reponse_clean_new_object(self):
+        reponse = ReponseUtilisateur(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=5.0
+        )
+        # Should not raise
+        reponse.clean()
+
+    def test_reponse_clean_validates_numeric_and_no_propositions(self):
+        from django.core.exceptions import ValidationError
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        with self.assertRaises(ValidationError):
+            reponse.clean()
+
+    def test_reponse_clean_validates_both_fields_raises(self):
+        from django.core.exceptions import ValidationError
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=5.0
+        )
+        PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop)
+        with self.assertRaises(ValidationError):
+            reponse.clean()
+
+
+class ReponseUpdateCoverageTestCase(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='upd_user', email='upd@test.com', password='pass')
+        self.client.force_authenticate(user=self.user)
+        self.type_choix = TypeQuestion.objects.create(nom='ChoixUpd')
+        self.question = Question.objects.create(
+            title='Upd Question',
+            type=self.type_choix,
+            status='Actif'
+        )
+        self.prop1 = Proposition.objects.create(question=self.question, texte='Upd Opt 1')
+        self.prop2 = Proposition.objects.create(question=self.question, texte='Upd Opt 2')
+
+    def test_update_response_replaces_propositions(self):
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop1)
+
+        url = reverse('reponse-detail', kwargs={'pk': reponse.id})
+        data = {
+            'propositions_selectionnees': [{'proposition': self.prop2.id}]
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        reponse.refresh_from_db()
+        self.assertEqual(reponse.propositions_selectionnees.count(), 1)
+        self.assertEqual(reponse.propositions_selectionnees.first().proposition, self.prop2)
+
+    def test_validate_with_instance_and_existing_propositions(self):
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop1)
+
+        url = reverse('reponse-detail', kwargs={'pk': reponse.id})
+        # PATCH without propositions_selectionnees key — it uses existing propositions
+        data = {}
+        response = self.client.patch(url, data, format='json')
+        # Should be 200 (existing props keep response valid)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_update_response_by_other_user_fails(self):
+        other_user = User.objects.create_user(username='other_upd', email='other@upd.com', password='pass')
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=other_user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop1)
+
+        url = reverse('reponse-detail', kwargs={'pk': reponse.id})
+        self.client.force_authenticate(user=self.user)
+        data = {}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_slider_response_clears_value(self):
+        type_slider = TypeQuestion.objects.create(nom='SliderUpd')
+        question_slider = Question.objects.create(
+            title='Slider Upd Q',
+            type=type_slider,
+            min_value=0.0,
+            max_value=10.0,
+            status='Actif'
+        )
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=question_slider,
+            valeur_numerique=5.0
+        )
+        url = reverse('reponse-detail', kwargs={'pk': reponse.id})
+        data = {'valeur_numerique': None}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_choix_response_without_propositions_fails(self):
+        reponse = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.question,
+            valeur_numerique=None
+        )
+        PropositionSelectionnee.objects.create(reponse=reponse, proposition=self.prop1)
+
+        url = reverse('reponse-detail', kwargs={'pk': reponse.id})
+        data = {'propositions_selectionnees': []}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class SerializerDirectCoverageTestCase(TestCase):
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(username='ser_user', password='pwd')
+        self.type_slider = TypeQuestion.objects.create(nom='Slider')
+        self.type_choix = TypeQuestion.objects.create(nom='Choix')
+        
+        self.q_slider = Question.objects.create(title='Slider', type=self.type_slider)
+        self.q_choix = Question.objects.create(title='Choix', type=self.type_choix)
+        
+        self.reponse_slider = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.q_slider,
+            valeur_numerique=5.0
+        )
+        self.reponse_choix = ReponseUtilisateur.objects.create(
+            utilisateur=self.user,
+            question=self.q_choix,
+            valeur_numerique=None
+        )
+
+    def test_serializer_validate_initial_data_list(self):
+        from questions.serializers import ReponseUtilisateurSerializer
+        serializer = ReponseUtilisateurSerializer(data=[{'dummy': 'data'}])
+        self.assertEqual(serializer.validate({'dummy': 'data'}), {'dummy': 'data'})
+
+    def test_serializer_validate_slider_missing_value(self):
+        from questions.serializers import ReponseUtilisateurSerializer
+        from rest_framework.exceptions import ValidationError
+        serializer = ReponseUtilisateurSerializer(instance=self.reponse_slider, data={'valeur_numerique': None}, partial=True)
+        serializer.initial_data = {} 
+        with self.assertRaises(ValidationError) as ctx:
+            serializer.validate({'valeur_numerique': None})
+        self.assertIn("Cette question attend une valeur numérique", str(ctx.exception))
+
+    def test_serializer_validate_choix_missing_propositions(self):
+        from questions.serializers import ReponseUtilisateurSerializer
+        from rest_framework.exceptions import ValidationError
+        serializer = ReponseUtilisateurSerializer(instance=self.reponse_choix, data={}, partial=True)
+        serializer.initial_data = {'propositions_selectionnees': []}
+        with self.assertRaises(ValidationError) as ctx:
+            serializer.validate({})
+        self.assertIn("Cette question attend une ou plusieurs propositions", str(ctx.exception))
+
+    def test_serializer_update_wrong_user(self):
+        from questions.serializers import ReponseUtilisateurSerializer
+        from rest_framework.exceptions import ValidationError
+        from unittest.mock import MagicMock
+        
+        other_user = User.objects.create_user(username='other_u', password='pwd')
+        mock_request = MagicMock()
+        mock_request.user = other_user
+        
+        serializer = ReponseUtilisateurSerializer(instance=self.reponse_slider, context={'request': mock_request})
+        with self.assertRaises(ValidationError) as ctx:
+            serializer.update(self.reponse_slider, {})
+        self.assertIn("Impossible de modifier une réponse qui ne vous appartient pas", str(ctx.exception))
