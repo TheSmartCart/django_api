@@ -27,5 +27,7 @@ attrs==25.3.0
 # Image handling
 pillow==11.2.1
 
+gunicorn==23.0.0
+
 # Testing & Coverage
 coverage==7.15.0

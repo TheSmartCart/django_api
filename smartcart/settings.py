@@ -22,14 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-scntxhn7go4^@kw2@7mhsgm#no(xd7zh9o2d+-w7gdsn03gjn0'
+# En prod, définir la variable d'env DJANGO_SECRET_KEY sur le VPS
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-scntxhn7go4^@kw2@7mhsgm#no(xd7zh9o2d+-w7gdsn03gjn0'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# En prod, définir DJANGO_DEBUG=False sur le VPS
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
-ALLOWED_HOSTS = []
+
+_allowed_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
 
 
 # Application definition
@@ -147,6 +154,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+# Dossier de destination pour collectstatic (prod)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Ajout pour la gestion des fichiers médias
 MEDIA_URL = '/media/'
