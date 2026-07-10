@@ -532,4 +532,4 @@ class SerializerDirectCoverageTestCase(TestCase):
         serializer = ReponseUtilisateurSerializer(instance=self.reponse_slider, context={'request': mock_request})
         with self.assertRaises(ValidationError) as ctx:
             serializer.update(self.reponse_slider, {})
-        self.assertIn("Impossible de modifier une réponse qui ne vous appartient pas", str(ctx.exception))
+        self.assertIn("Vous ne pouvez pas modifier une réponse qui ne vous appartient pas", str(ctx.exception))
