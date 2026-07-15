@@ -45,7 +45,8 @@ jobs:
 
             echo "Code Update..."
             cd /var/www/django_api/django_api
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "Activating venv..."
             source /var/www/django_api/venv/bin/activate
