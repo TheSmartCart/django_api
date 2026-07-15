@@ -7,11 +7,11 @@ on:
 
 jobs:
   test:
-    name: Tests unitaires
+    name: Unit tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout du code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python 3.11
@@ -20,21 +20,21 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Installer les dépendances
+      - name: Install the dependencies
         run: pip install -r requirements.txt
 
-      - name: Lancer les tests
+      - name: Run tests
         run: python manage.py test --verbosity=2
         env:
           DJANGO_SECRET_KEY: "ci-test-secret-key-not-used-in-prod"
 
   deploy:
-    name: Déploiement sur VPS
+    name: Deployment on a VPS
     runs-on: ubuntu-latest
     needs: test
 
     steps:
-      - name: Déploiement via SSH
+      - name: Deployment via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -43,23 +43,56 @@ jobs:
           script: |
             set -e
 
-            echo "Mise à jour du code..."
+            echo "Code Update..."
             cd /var/www/django_api/django_api
             git pull origin main
 
-            echo "Activation de venv..."
+            echo "Activating venv..."
             source /var/www/django_api/venv/bin/activate
 
-            echo "Installation des dépendances..."
+            echo "Installing dependencies..."
             pip install -r requirements.txt
 
-            echo "Application des migrations..."
+            echo "Applying migrations..."
             python manage.py migrate --noinput
 
-            echo "Collecte des fichiers statiques..."
+            echo "Collecting static files..."
             python manage.py collectstatic --noinput
 
-            echo "Redémarrage du service gunicorn..."
+            echo "Restarting gunicorn..."
             sudo systemctl restart smartcart
 
-            echo "Déploiement terminé avec succès !"
+            echo "Deployment finished successfully!"
+
+  tag:
+    name: Creating the Tag
+    runs-on: ubuntu-latest
+    needs: deploy
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version number
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import ast; tree = ast.parse(open('smartcart/settings.py').read()); print(next(node.value.value for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'API_VERSION' for t in node.targets)))")
+
+      - name: Set Up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and Push the Tag
+        run: |
+          TAG_NAME="v${{ env.VERSION }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "The tag $TAG_NAME already exists. Skipping."
+          else
+            echo "Creating the Tag $TAG_NAME..."
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
