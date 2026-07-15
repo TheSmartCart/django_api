@@ -34,6 +34,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
+API_VERSION = '1.0.0'
 
 _allowed_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
