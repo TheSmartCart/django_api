@@ -1,29 +1,29 @@
 from django.contrib import admin
-from .models import Commande, ArticleCommande
+from .models import Order, OrderItem
 
-class ArticleCommandeInline(admin.TabularInline):
-    model = ArticleCommande
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
     extra = 0
-    readonly_fields = ['prix_total']
+    readonly_fields = ['total_price']
 
-@admin.register(Commande)
-class CommandeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'utilisateur', 'magasin', 'statut', 'date_creation', 'prix_total')
-    list_filter = ('statut', 'magasin')
-    search_fields = ('utilisateur__username', 'magasin__nom')
-    inlines = [ArticleCommandeInline]
-    readonly_fields = ['prix_total']
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'store', 'status', 'created_at', 'total_price')
+    list_filter = ('status', 'store')
+    search_fields = ('user__username', 'store__name')
+    inlines = [OrderItemInline]
+    readonly_fields = ['total_price']
     fieldsets = (
         (None, {
-            'fields': ('utilisateur', 'magasin', 'statut')
+            'fields': ('user', 'store', 'status')
         }),
-        ('Informations', {
-            'fields': ('date_creation', 'date_modification', 'prix_total')
+        ('Information', {
+            'fields': ('created_at', 'updated_at', 'total_price')
         }),
     )
 
-@admin.register(ArticleCommande)
-class ArticleCommandeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'commande', 'produit', 'quantite', 'prix_unitaire', 'prix_total')
-    list_filter = ('commande__statut',)
-    search_fields = ('commande__id', 'produit__nom')
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'product', 'quantity', 'unit_price', 'total_price')
+    list_filter = ('order__status',)
+    search_fields = ('order__id', 'product__name')

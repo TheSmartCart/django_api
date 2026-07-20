@@ -2,8 +2,15 @@ from rest_framework import viewsets, status, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee, ReponseUtilisateur
-from .serializers import QuestionSerializer, PropositionSerializer, TypeQuestionSerializer, PropositionSelectionneeSerializer, ReponseUtilisateurSerializer, ReponseUtilisateurReadSerializer
+from .models import Question, Option, QuestionType, SelectedOption, UserAnswer
+from .serializers import (
+    QuestionSerializer,
+    OptionSerializer,
+    QuestionTypeSerializer,
+    SelectedOptionSerializer,
+    UserAnswerSerializer,
+    UserAnswerReadSerializer
+)
 
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
@@ -25,55 +32,54 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
-    def with_propositions(self, request, pk=None):
-        """Endpoint pour obtenir une question avec toutes ses propositions."""
+    def with_options(self, request, pk=None):
+        """Endpoint to get a question with all its options."""
         question = self.get_object()
         serializer = self.get_serializer(question)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def by_type(self, request):
-        """Endpoint pour filtrer les questions par type."""
+        """Endpoint to filter questions by type."""
         type_id = request.query_params.get('type_id', None)
         if type_id is not None:
             questions = Question.objects.filter(type_id=type_id)
             serializer = self.get_serializer(questions, many=True)
             return Response(serializer.data)
-        return Response({"error": "Paramètre type_id requis"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "type_id parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-class PropositionViewSet(viewsets.ModelViewSet):
-    queryset = Proposition.objects.all()
-    serializer_class = PropositionSerializer
+class OptionViewSet(viewsets.ModelViewSet):
+    queryset = Option.objects.all()
+    serializer_class = OptionSerializer
     
     @action(detail=False, methods=['get'])
     def by_question(self, request):
-        """Endpoint pour filtrer les propositions par question."""
+        """Endpoint to filter options by question."""
         question_id = request.query_params.get('question_id', None)
         if question_id is not None:
-            propositions = Proposition.objects.filter(question_id=question_id)
-            serializer = self.get_serializer(propositions, many=True)
+            options = Option.objects.filter(question_id=question_id)
+            serializer = self.get_serializer(options, many=True)
             return Response(serializer.data)
-        return Response({"error": "Paramètre question_id requis"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "question_id parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-class TypeQuestionViewSet(viewsets.ModelViewSet):
-    queryset = TypeQuestion.objects.all()
-    serializer_class = TypeQuestionSerializer
+class QuestionTypeViewSet(viewsets.ModelViewSet):
+    queryset = QuestionType.objects.all()
+    serializer_class = QuestionTypeSerializer
 
-class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
-    queryset = ReponseUtilisateur.objects.all()
-    serializer_class = ReponseUtilisateurSerializer
+class UserAnswerViewSet(viewsets.ModelViewSet):
+    queryset = UserAnswer.objects.all()
+    serializer_class = UserAnswerSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
-        return ReponseUtilisateur.objects.filter(utilisateur=user)
+        return UserAnswer.objects.filter(user=user)
     
     def get_serializer_class(self):
-        """Utilise le serializer de lecture pour les actions GET, et le serializer d'écriture pour les autres."""
         if self.action in ['list', 'retrieve']:
-            return ReponseUtilisateurReadSerializer
-        return ReponseUtilisateurSerializer
+            return UserAnswerReadSerializer
+        return UserAnswerSerializer
         
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -88,7 +94,7 @@ class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        # Bulk : gestion partielle
+        
         results = []
         errors = []
         for idx, item in enumerate(request.data):
@@ -100,6 +106,6 @@ class ReponseUtilisateurViewSet(viewsets.ModelViewSet):
                 errors.append({"index": idx, "errors": item_serializer.errors})
         return Response({"created": results, "errors": errors}, status=status.HTTP_207_MULTI_STATUS)
 
-class PropositionSelectionneeViewSet(viewsets.ModelViewSet):
-    queryset = PropositionSelectionnee.objects.all()
-    serializer_class = PropositionSelectionneeSerializer
+class SelectedOptionViewSet(viewsets.ModelViewSet):
+    queryset = SelectedOption.objects.all()
+    serializer_class = SelectedOptionSerializer

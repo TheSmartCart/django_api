@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     'users',
     'recipes',
     'questions',
-    'enseignes',
+    'stores',
     'orders',
     'rest_framework_simplejwt.token_blacklist',
 ]

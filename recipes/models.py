@@ -3,59 +3,68 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class Recette(models.Model):
-    nom = models.CharField(max_length=255)
-    temps_preparation = models.CharField(max_length=50)
-    difficulte = models.CharField(max_length=50, choices=[('Debutant', 'Debutant'), ('Intermediaire', 'Intermediaire'), ('Expert', 'Expert'), ('Chef etoile', 'Chef etoile')])
-    date_creation = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Brouillon', 'Brouillon'), ('Inactif', 'Inactif')], default='Actif')
-    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recettes")
+class Recipe(models.Model):
+    title = models.CharField(max_length=255)
+    prep_time = models.CharField(max_length=50)
+    difficulty = models.CharField(max_length=50, choices=[
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('expert', 'Expert'),
+        ('starred_chef', 'Starred Chef')
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=[
+        ('active', 'Active'),
+        ('draft', 'Draft'),
+        ('inactive', 'Inactive')
+    ], default='active')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recipes")
     description = models.TextField(null=True, blank=True)
-    image = models.ImageField(upload_to='recettes/', null=True, blank=True)
+    image = models.ImageField(upload_to='recipes/', null=True, blank=True)
 
     def __str__(self):
-        return self.nom
+        return self.title
 
 class Ingredient(models.Model):
-    nom = models.CharField(max_length=255, unique=True)
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
+    name = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
 
     def __str__(self):
-        return self.nom
+        return self.name
 
-class IngredientRecette(models.Model):
-    recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="ingredients_recette")
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name="recettes_utilisant")
-    quantite = models.FloatField()
-    unite = models.CharField(max_length=50)
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
-
-    def __str__(self):
-        return f"{self.quantite} {self.unite} de {self.ingredient.nom} pour {self.recette.nom}"
-
-class Ustensile(models.Model):
-    nom = models.CharField(max_length=255, unique=True)
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
+class RecipeIngredient(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="recipe_ingredients")
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name="used_in_recipes")
+    quantity = models.FloatField()
+    unit = models.CharField(max_length=50)
+    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
 
     def __str__(self):
-        return self.nom
+        return f"{self.quantity} {self.unit} of {self.ingredient.name} for {self.recipe.title}"
 
-class UstensileRecette(models.Model):
-    recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="ustensile_recette")
-    ustensile = models.ForeignKey(Ustensile, on_delete=models.CASCADE, related_name="recettes_utilisant")
-    status = models.CharField(max_length=20, choices=[('Actif', 'Actif'), ('Inactif', 'Inactif')], default='Actif')
+class Utensil(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
 
     def __str__(self):
-        return f"Vous aurez besoin de {self.ustensile.nom} pour {self.recette.nom}"
+        return self.name
 
-class Etape(models.Model):
-    recette = models.ForeignKey(Recette, on_delete=models.CASCADE, related_name="etapes")
+class RecipeUtensil(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="recipe_utensils")
+    utensil = models.ForeignKey(Utensil, on_delete=models.CASCADE, related_name="used_in_recipes")
+    status = models.CharField(max_length=20, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
+
+    def __str__(self):
+        return f"You will need {self.utensil.name} for {self.recipe.title}"
+
+class Step(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="steps")
     description = models.TextField()
-    ordre = models.PositiveIntegerField()
-    statut = models.CharField(max_length=50, default="actif")
+    step_number = models.PositiveIntegerField()
+    status = models.CharField(max_length=50, default="active")
 
     class Meta:
-        ordering = ["ordre"]
+        ordering = ["step_number"]
 
     def __str__(self):
-        return f"Étape {self.ordre} - {self.recette.nom}"
+        return f"Step {self.step_number} - {self.recipe.title}"

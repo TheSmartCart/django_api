@@ -1,83 +1,81 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import (Recette, Ingredient, IngredientRecette, Etape, Ustensile, UstensileRecette)
+from .models import (Recipe, Ingredient, RecipeIngredient, Step, Utensil, RecipeUtensil)
 
-class EtapeSerializer(serializers.ModelSerializer):
+class StepSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Etape
-        fields = ["id", "ordre", "description", "recette"]
+        model = Step
+        fields = ["id", "step_number", "description", "recipe"]
         extra_kwargs = {
-            'recette': {'required': True}
+            'recipe': {'required': True}
         }
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = ["id", "nom"]
+        fields = ["id", "name"]
 
-class IngredientRecetteDetailSerializer(serializers.ModelSerializer):
+class RecipeIngredientDetailSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
     
     class Meta:
-        model = IngredientRecette
-        fields = ["id", "ingredient", "quantite", "unite"]
+        model = RecipeIngredient
+        fields = ["id", "ingredient", "quantity", "unit"]
 
-class UstensileSerializer(serializers.ModelSerializer):
+class UtensilSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Ustensile
+        model = Utensil
         fields = '__all__'
         extra_kwargs = {
-            'status': {'required': False, 'default': 'Actif'}
+            'status': {'required': False, 'default': 'active'}
         }
 
-class UstensileRecetteDetailSerializer(serializers.ModelSerializer):
-    ustensile = UstensileSerializer(read_only=True)
+class RecipeUtensilDetailSerializer(serializers.ModelSerializer):
+    utensil = UtensilSerializer(read_only=True)
     
     class Meta:
-        model = UstensileRecette
+        model = RecipeUtensil
         fields = '__all__'
 
-class RecetteSerializer(serializers.ModelSerializer):
+class RecipeSerializer(serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
-    etapes = EtapeSerializer(many=True, read_only=True)
-    ustensiles = serializers.SerializerMethodField()
+    steps = StepSerializer(many=True, read_only=True)
+    utensils = serializers.SerializerMethodField()
     
     class Meta:
-        model = Recette
+        model = Recipe
         fields = '__all__'
         extra_kwargs = {
-            'utilisateur': {'read_only': True},
-            'date_creation': {'read_only': True},
+            'user': {'read_only': True},
+            'created_at': {'read_only': True},
             'status': {'read_only': True},
         }
     
     @extend_schema_field(IngredientSerializer(many=True))
     def get_ingredients(self, obj):
-        """Retourne uniquement la liste des objets Ingredient actifs liés à la recette."""
-        ingredients_qs = Ingredient.objects.filter(recettes_utilisant__recette=obj,
-                                                  recettes_utilisant__status='Actif').distinct()
+        ingredients_qs = Ingredient.objects.filter(used_in_recipes__recipe=obj,
+                                                  used_in_recipes__status='active').distinct()
         return IngredientSerializer(ingredients_qs, many=True).data
     
-    @extend_schema_field(UstensileSerializer(many=True))
-    def get_ustensiles(self, obj):
-        """Retourne uniquement la liste des objets Ustensile actifs pour la recette."""
-        ustensiles_qs = Ustensile.objects.filter(recettes_utilisant__recette=obj,
-                                                recettes_utilisant__status='Actif')
-        return UstensileSerializer(ustensiles_qs, many=True).data
+    @extend_schema_field(UtensilSerializer(many=True))
+    def get_utensils(self, obj):
+        utensils_qs = Utensil.objects.filter(used_in_recipes__recipe=obj,
+                                             used_in_recipes__status='active')
+        return UtensilSerializer(utensils_qs, many=True).data
 
 
-class IngredientRecetteSerializer(serializers.ModelSerializer):
-    ingredient_nom = serializers.ReadOnlyField(source="ingredient.nom")
-    recette_nom = serializers.ReadOnlyField(source="recette.nom")
-
-    class Meta:
-        model = IngredientRecette
-        fields = ["id", "recette", "recette_nom", "ingredient", "ingredient_nom", "quantite", "unite"]
-
-class UstensileRecetteSerializer(serializers.ModelSerializer):
-    ustensile_nom = serializers.ReadOnlyField(source="ustensile.nom")
-    recette_nom = serializers.ReadOnlyField(source="recette.nom")
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    ingredient_name = serializers.ReadOnlyField(source="ingredient.name")
+    recipe_title = serializers.ReadOnlyField(source="recipe.title")
 
     class Meta:
-        model = UstensileRecette
-        fields = ["id", "recette", "recette_nom", "ustensile", "ustensile_nom"]
+        model = RecipeIngredient
+        fields = ["id", "recipe", "recipe_title", "ingredient", "ingredient_name", "quantity", "unit"]
+
+class RecipeUtensilSerializer(serializers.ModelSerializer):
+    utensil_name = serializers.ReadOnlyField(source="utensil.name")
+    recipe_title = serializers.ReadOnlyField(source="recipe.title")
+
+    class Meta:
+        model = RecipeUtensil
+        fields = ["id", "recipe", "recipe_title", "utensil", "utensil_name"]

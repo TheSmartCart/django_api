@@ -9,7 +9,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'image_profil', 'first_name', 'last_name', 'password', 'access', 'refresh']
+        fields = ['id', 'username', 'email', 'profile_image', 'first_name', 'last_name', 'password', 'access', 'refresh']
 
     def get_access(self, obj):
         return getattr(obj, 'access', None)

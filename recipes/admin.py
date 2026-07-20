@@ -1,14 +1,14 @@
 from django.contrib import admin
-from .models import Recette, Ingredient, IngredientRecette, Etape, Ustensile, UstensileRecette
+from .models import Recipe, Ingredient, RecipeIngredient, Step, Utensil, RecipeUtensil
 
-@admin.register(Recette)
-class RecetteAdmin(admin.ModelAdmin):
-	list_display = ("id", "nom", "utilisateur", "status", "date_creation")
-	search_fields = ("nom", "utilisateur__username")
-	list_filter = ("status", )
+@admin.register(Recipe)
+class RecipeAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "user", "status", "created_at")
+    search_fields = ("title", "user__username")
+    list_filter = ("status", )
 
 admin.site.register(Ingredient)
-admin.site.register(IngredientRecette)
-admin.site.register(Etape)
-admin.site.register(Ustensile)
-admin.site.register(UstensileRecette)
+admin.site.register(RecipeIngredient)
+admin.site.register(Step)
+admin.site.register(Utensil)
+admin.site.register(RecipeUtensil)

@@ -1,35 +1,35 @@
 from rest_framework import serializers
-from .models import Question, Proposition, TypeQuestion, PropositionSelectionnee, ReponseUtilisateur
+from .models import Question, Option, QuestionType, SelectedOption, UserAnswer
 
-class PropositionSerializer(serializers.ModelSerializer):
+class OptionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Proposition
-        fields = ['id', 'texte', 'statut', 'image']
+        model = Option
+        fields = ['id', 'text', 'status', 'image']
 
-class TypeQuestionSerializer(serializers.ModelSerializer):
+class QuestionTypeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TypeQuestion
+        model = QuestionType
         fields = '__all__'
 
 class QuestionSerializer(serializers.ModelSerializer):
-    propositions = PropositionSerializer(many=True, required=False)
-    type_nom = serializers.ReadOnlyField(source='type.nom', read_only=True)
+    options = OptionSerializer(many=True, required=False)
+    type_name = serializers.ReadOnlyField(source='type.name', read_only=True)
     
     class Meta:
         model = Question
-        fields = ['id', 'title', 'description', 'type', 'type_nom', 'dateCreation', 'status', 'min_value', 'max_value', 'propositions']
+        fields = ['id', 'title', 'description', 'type', 'type_name', 'created_at', 'status', 'min_value', 'max_value', 'options']
     
     def create(self, validated_data):
-        propositions_data = validated_data.pop('propositions', [])
+        options_data = validated_data.pop('options', [])
         question = Question.objects.create(**validated_data)
         
-        for proposition_data in propositions_data:
-            Proposition.objects.create(question=question, **proposition_data)
+        for option_data in options_data:
+            Option.objects.create(question=question, **option_data)
         
         return question
     
     def update(self, instance, validated_data):
-        propositions_data = validated_data.pop('propositions', [])
+        options_data = validated_data.pop('options', [])
         
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
@@ -39,148 +39,132 @@ class QuestionSerializer(serializers.ModelSerializer):
         instance.max_value = validated_data.get('max_value', instance.max_value)
         instance.save()
         
-        if propositions_data:
-            instance.propositions.all().delete()
+        if options_data:
+            instance.options.all().delete()
         
         return instance
 
-class PropositionSelectionneeSerializer(serializers.ModelSerializer):
-    texte_proposition = serializers.ReadOnlyField(source='proposition.texte')
+class SelectedOptionSerializer(serializers.ModelSerializer):
+    option_text = serializers.ReadOnlyField(source='option.text')
     
     class Meta:
-        model = PropositionSelectionnee
-        fields = ['id', 'proposition', 'texte_proposition']
+        model = SelectedOption
+        fields = ['id', 'option', 'option_text']
 
-class ReponseUtilisateurSerializer(serializers.ModelSerializer):
-    propositions_selectionnees = PropositionSelectionneeSerializer(many=True, required=False, write_only=True)
-    nom_utilisateur = serializers.ReadOnlyField(source='utilisateur.username')
-    titre_question = serializers.ReadOnlyField(source='question.title')
+class UserAnswerSerializer(serializers.ModelSerializer):
+    selected_options = SelectedOptionSerializer(many=True, required=False, write_only=True)
+    user_name = serializers.ReadOnlyField(source='user.username')
+    question_title = serializers.ReadOnlyField(source='question.title')
     
     class Meta:
-        model = ReponseUtilisateur
-        fields = ['id', 'utilisateur', 'nom_utilisateur', 'question', 'titre_question', 
-                 'date_creation', 'valeur_numerique', 'propositions_selectionnees']
-        read_only_fields = ['utilisateur']
+        model = UserAnswer
+        fields = ['id', 'user', 'user_name', 'question', 'question_title', 
+                  'created_at', 'numeric_value', 'selected_options']
+        read_only_fields = ['user']
 
     def validate(self, data):
         if isinstance(self.initial_data, list):
             return data
             
-        # Support partial updates (PATCH) by merging with self.instance values
         if self.instance:
             question = data['question'] if 'question' in data else self.instance.question
-            valeur_numerique = data['valeur_numerique'] if 'valeur_numerique' in data else self.instance.valeur_numerique
+            numeric_value = data['numeric_value'] if 'numeric_value' in data else self.instance.numeric_value
             
-            if 'propositions_selectionnees' in self.initial_data:
-                propositions_data = self.initial_data.get('propositions_selectionnees', [])
-                has_propositions = len(propositions_data) > 0
+            if 'selected_options' in self.initial_data:
+                options_data = self.initial_data.get('selected_options', [])
+                has_options = len(options_data) > 0
             else:
-                propositions_data = []
-                has_propositions = self.instance.propositions_selectionnees.exists()
+                options_data = []
+                has_options = self.instance.selected_options.exists()
         else:
             question = data.get('question')
-            valeur_numerique = data.get('valeur_numerique')
-            propositions_data = self.initial_data.get('propositions_selectionnees', [])
-            has_propositions = len(propositions_data) > 0
+            numeric_value = data.get('numeric_value')
+            options_data = self.initial_data.get('selected_options', [])
+            has_options = len(options_data) > 0
 
-        # Vérification du type de question
-        type_nom = getattr(question.type, 'nom', None) if question else None
-        is_slider = type_nom and type_nom.lower() == 'slider'
+        type_name = getattr(question.type, 'name', None) if question else None
+        is_slider = type_name and type_name.lower() == 'slider'
 
         if is_slider:
-            # Pour les sliders, il faut une valeur numérique et aucune proposition
-            if valeur_numerique is None:
-                raise serializers.ValidationError("Cette question attend une valeur numérique.")
-            if has_propositions:
-                raise serializers.ValidationError("Vous ne pouvez pas sélectionner de proposition pour une question de type slider.")
+            if numeric_value is None:
+                raise serializers.ValidationError("This question expects a numeric value.")
+            if has_options:
+                raise serializers.ValidationError("You cannot select options for a slider question.")
         else:
-            # Pour les autres types, il faut des propositions et pas de valeur numérique
-            if not has_propositions:
-                raise serializers.ValidationError("Cette question attend une ou plusieurs propositions sélectionnées.")
-            if valeur_numerique is not None:
-                raise serializers.ValidationError("Vous ne pouvez pas fournir une valeur numérique pour cette question.")
+            if not has_options:
+                raise serializers.ValidationError("This question expects one or more selected options.")
+            if numeric_value is not None:
+                raise serializers.ValidationError("You cannot provide a numeric value for this question.")
 
-        # Vérification min/max pour les sliders
-        if is_slider and question and valeur_numerique is not None:
-            if question.min_value is not None and valeur_numerique < question.min_value:
-                raise serializers.ValidationError(f"La valeur numérique doit être supérieure ou égale à {question.min_value}.")
-            if question.max_value is not None and valeur_numerique > question.max_value:
-                raise serializers.ValidationError(f"La valeur numérique doit être inférieure ou égale à {question.max_value}.")
+        if is_slider and question and numeric_value is not None:
+            if question.min_value is not None and numeric_value < question.min_value:
+                raise serializers.ValidationError(f"Numeric value must be greater than or equal to {question.min_value}.")
+            if question.max_value is not None and numeric_value > question.max_value:
+                raise serializers.ValidationError(f"Numeric value must be less than or equal to {question.max_value}.")
 
-        # Vérification que chaque proposition appartient bien à la question
-        if not is_slider and question and propositions_data:
-            question_propositions_ids = set(question.propositions.values_list('id', flat=True))
-            for prop in propositions_data:
-                prop_id = prop.get('proposition')
-                if prop_id not in question_propositions_ids:
-                    raise serializers.ValidationError(f"La proposition {prop_id} n'appartient pas à la question {question.id}.")
+        if not is_slider and question and options_data:
+            question_options_ids = set(question.options.values_list('id', flat=True))
+            for opt in options_data:
+                opt_id = opt.get('option')
+                if opt_id not in question_options_ids:
+                    raise serializers.ValidationError(f"Option {opt_id} does not belong to question {question.id}.")
 
         return data
 
     def create(self, validated_data):
-        # Récupérer l'utilisateur à partir du contexte (injecté par la vue)
-        utilisateur = self.context['request'].user
-        validated_data['utilisateur'] = utilisateur
+        user = self.context['request'].user
+        validated_data['user'] = user
         
-        # Extraire les propositions_data avant de créer la réponse
-        propositions_data = validated_data.pop('propositions_selectionnees', [])
+        options_data = validated_data.pop('selected_options', [])
         
-        # Créer l'objet ReponseUtilisateur
-        reponse = ReponseUtilisateur.objects.create(
-            utilisateur=validated_data['utilisateur'],
+        user_answer = UserAnswer.objects.create(
+            user=validated_data['user'],
             question=validated_data['question'],
-            valeur_numerique=validated_data.get('valeur_numerique')
+            numeric_value=validated_data.get('numeric_value')
         )
         
-        # Maintenant ajouter les propositions
-        for proposition_data in propositions_data:
-            proposition_id = proposition_data.get('proposition')
-            if isinstance(proposition_id, Proposition):
-                proposition_id = proposition_id.id
-            if proposition_id:
-                PropositionSelectionnee.objects.create(
-                    reponse=reponse,
-                    proposition_id=proposition_id
+        for option_data in options_data:
+            option_id = option_data.get('option')
+            if isinstance(option_id, Option):
+                option_id = option_id.id
+            if option_id:
+                SelectedOption.objects.create(
+                    user_answer=user_answer,
+                    option_id=option_id
                 )
         
-        return reponse
+        return user_answer
         
     def update(self, instance, validated_data):
-        # Vérifier que l'utilisateur actuel est bien le créateur de la réponse
         request = self.context.get('request')
-        if request and request.user != instance.utilisateur:
-            raise serializers.ValidationError("Vous ne pouvez pas modifier une réponse qui ne vous appartient pas.")
+        if request and request.user != instance.user:
+            raise serializers.ValidationError("You cannot modify an answer that does not belong to you.")
             
-        # Gérer la mise à jour des champs simples
-        instance.valeur_numerique = validated_data.get('valeur_numerique', instance.valeur_numerique)
+        instance.numeric_value = validated_data.get('numeric_value', instance.numeric_value)
         instance.save()
         
-        # Gérer la mise à jour des propositions sélectionnées
-        propositions_data = self.initial_data.get('propositions_selectionnees', [])
-        if 'propositions_selectionnees' in self.initial_data:
-            # Supprimer les anciennes propositions
-            instance.propositions_selectionnees.all().delete()
+        options_data = self.initial_data.get('selected_options', [])
+        if 'selected_options' in self.initial_data:
+            instance.selected_options.all().delete()
             
-            # Ajouter les nouvelles propositions
-            for proposition_data in propositions_data:
-                proposition_id = proposition_data.get('proposition')
-                if proposition_id:
-                    PropositionSelectionnee.objects.create(
-                        reponse=instance,
-                        proposition_id=proposition_id
+            for option_data in options_data:
+                option_id = option_data.get('option')
+                if option_id:
+                    SelectedOption.objects.create(
+                        user_answer=instance,
+                        option_id=option_id
                     )
         
         return instance
 
-class ReponseUtilisateurReadSerializer(serializers.ModelSerializer):
+class UserAnswerReadSerializer(serializers.ModelSerializer):
     questionText = serializers.ReadOnlyField(source='question.title')
     selectedOptions = serializers.SerializerMethodField()
-    sliderValue = serializers.ReadOnlyField(source='valeur_numerique')
+    sliderValue = serializers.ReadOnlyField(source='numeric_value')
     
     class Meta:
-        model = ReponseUtilisateur
+        model = UserAnswer
         fields = ['questionText', 'selectedOptions', 'sliderValue']
     
     def get_selectedOptions(self, obj):
-        """Retourne la liste des textes des propositions sélectionnées."""
-        return [prop_sel.proposition.texte for prop_sel in obj.propositions_selectionnees.all()]
+        return [selected_opt.option.text for selected_opt in obj.selected_options.all()]

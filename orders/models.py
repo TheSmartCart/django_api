@@ -1,47 +1,47 @@
 from django.db import models
 from users.models import CustomUser
-from enseignes.models import Produit, Magasin
+from stores.models import Product, Store
 
-class Commande(models.Model):
-    STATUT_CHOICES = [
-        ('en_attente', 'En attente'),
-        ('en_preparation', 'En préparation'),
-        ('prete', 'Prête'),
-        ('recuperee', 'Récupérée'),
-        ('annulee', 'Annulée'),
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_preparation', 'In preparation'),
+        ('ready', 'Ready'),
+        ('collected', 'Collected'),
+        ('cancelled', 'Cancelled'),
     ]
 
-    utilisateur = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='commandes')
-    date_creation = models.DateTimeField(auto_now_add=True)
-    date_modification = models.DateTimeField(auto_now=True)
-    statut = models.CharField(max_length=50, choices=STATUT_CHOICES, default='en_attente')
-    magasin = models.ForeignKey(Magasin, on_delete=models.CASCADE, related_name='commandes')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='orders')
     
     def __str__(self):
-        return f"Commande #{self.id} - {self.utilisateur.username}"
+        return f"Order #{self.id} - {self.user.username}"
     
     @property
-    def prix_total(self):
-        return sum(item.prix_total for item in self.articles.all())
+    def total_price(self):
+        return sum(item.total_price for item in self.items.all())
     
     class Meta:
-        verbose_name = "Commande"
-        verbose_name_plural = "Commandes"
-        ordering = ['-date_creation']
+        verbose_name = "Order"
+        verbose_name_plural = "Orders"
+        ordering = ['-created_at']
 
-class ArticleCommande(models.Model):
-    commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='articles')
-    produit = models.ForeignKey(Produit, on_delete=models.CASCADE)
-    quantite = models.PositiveIntegerField(default=1)
-    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):
-        return f"{self.quantite} x {self.produit.nom} - Commande #{self.commande.id}"
+        return f"{self.quantity} x {self.product.name} - Order #{self.order.id}"
     
     @property
-    def prix_total(self):
-        return self.prix_unitaire * self.quantite
+    def total_price(self):
+        return self.unit_price * self.quantity
     
     class Meta:
-        verbose_name = "Article de commande"
-        verbose_name_plural = "Articles de commande"
+        verbose_name = "Order item"
+        verbose_name_plural = "Order items"
