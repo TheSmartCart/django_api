@@ -49,7 +49,7 @@ API_VERSION = '1.0.1'
 
 _allowed_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '155.94.134.154,localhost,127.0.0.1,*').strip("'\" \r\n")
 
-ALLOWED_HOSTS = ['155.94.134.154', 'localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
 
 
 # Application definition
