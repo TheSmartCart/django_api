@@ -18,6 +18,17 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# Load environment variables from .env.prod / .env if available
+try:
+    from dotenv import load_dotenv
+    for env_file in [BASE_DIR.parent / '.env.prod', BASE_DIR / '.env.prod', BASE_DIR / '.env']:
+        if env_file.exists():
+            load_dotenv(env_file)
+            break
+except ImportError:
+    pass
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -26,17 +37,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
     'django-insecure-scntxhn7go4^@kw2@7mhsgm#no(xd7zh9o2d+-w7gdsn03gjn0'
-)
+).strip("'\" \r\n")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # En prod, définir DJANGO_DEBUG=False sur le VPS
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').strip("'\" \r\n").lower() in ('true', '1', 't')
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
-API_VERSION = '1.0.0'
+API_VERSION = '1.0.1'
 
-_allowed_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+_allowed_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '155.94.134.154,localhost,127.0.0.1,*').strip("'\" \r\n")
+
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
 
 

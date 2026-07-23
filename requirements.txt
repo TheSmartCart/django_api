@@ -29,5 +29,8 @@ pillow==11.2.1
 
 gunicorn==23.0.0
 
+# Environment variables
+python-dotenv==1.0.1
+
 # Testing & Coverage
 coverage==7.15.0
